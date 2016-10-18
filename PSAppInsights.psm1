@@ -1,7 +1,8 @@
 ﻿<#
     Add Azure Application Insight Tracing to Powershell Scripts and Modules
 
-
+    Ref .Net : https://msdn.microsoft.com/en-us/library/microsoft.applicationinsights.aspx
+    
     Ref: https://github.com/Microsoft/ApplicationInsights-JS/blob/master/API-reference.md
 #>
 
@@ -28,7 +29,10 @@ function New-AISession
         [string]$SessionID = (New-Guid), 
         [string]$OperationID = (New-Guid), 
         # Set to suppress sending messages in a test environment
-        [switch]$Synthetic 
+        [switch]$Synthetic,
+        
+        #Allow PII in Traces 
+        [switch]$AllowPII 
     )
 
     Process
@@ -47,11 +51,18 @@ function New-AISession
             # This information is attached to all events sent by the instance.
 
             $client.Context.Device.OperatingSystem = (Get-CimInstance Win32_OperatingSystem).version
-            $client.Context.Device.Id = $env:COMPUTERNAME #TODO : Need to hash this
 
 
             $client.Context.User.UserAgent = $Host.Name
-            $client.Context.User.Id = $env:USERNAME #TODO : Need to hash this
+            if ($AllowPII) {
+                #Only if Explicitly noted
+                $client.Context.Device.Id = $env:COMPUTERNAME 
+                $client.Context.User.Id = $env:USERNAME 
+            } else { 
+                #Default to NON-PII 
+                $client.Context.Device.Id = (Get-Hash -String $env:COMPUTERNAME -HashType MD5).hash 
+                $client.Context.User.Id = (Get-Hash -String $env:USERNAME -HashType MD5).hash  
+            }
 
             return $client 
         } else { 
@@ -59,6 +70,58 @@ function New-AISession
         }
     }
 }
+
+
+<#
+ Get-Hash Credits : Jeff Wouters
+ ref: http://jeffwouters.nl/index.php/2013/12/get-hash-for-files-or-strings/
+#>
+
+function Get-Hash {
+    [cmdletbinding()]
+    param (
+        [parameter(mandatory=$false,parametersetname="String")]$String,
+        [parameter(mandatory=$false,parametersetname="File")]$File,
+        [parameter(mandatory=$false,parametersetname="String")]
+        [validateset("MD5","SHA1","SHA256","SHA384","SHA512","RIPEMD160")]
+        [parameter(mandatory=$false,parametersetname="File")]
+        [validateset("MD5","SHA1","SHA256","SHA384","SHA512","RIPEMD160")]
+        [string]$HashType = "MD5"
+    )
+    switch ($PsCmdlet.ParameterSetName) { 
+        "String" {
+            $StringBuilder = New-Object System.Text.StringBuilder 
+            [System.Security.Cryptography.HashAlgorithm]::Create($HashType).ComputeHash([System.Text.Encoding]::UTF8.GetBytes($String))| ForEach-Object {
+                [Void]$StringBuilder.Append($_.ToString("x2")) 
+            }
+            $Object = New-Object -TypeName PSObject
+            $Object | Add-Member -MemberType NoteProperty -Name 'String' -value $String
+            $Object | Add-Member -MemberType NoteProperty -Name 'HashType' -Value $HashType
+            $Object | Add-Member -MemberType NoteProperty -Name 'Hash' -Value $StringBuilder.ToString()
+            $Object
+        } 
+        "File" {
+            $StringBuilder = New-Object System.Text.StringBuilder
+            $InputStream = New-Object System.IO.FileStream($File,[System.IO.FileMode]::Open)
+            switch ($HashType) {
+                "MD5" { $Provider = New-Object System.Security.Cryptography.MD5CryptoServiceProvider }
+                "SHA1" { $Provider = New-Object System.Security.Cryptography.SHA1CryptoServiceProvider }
+                "SHA256" { $Provider = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider }
+                "SHA384" { $Provider = New-Object System.Security.Cryptography.SHA384CryptoServiceProvider }
+                "SHA512" { $Provider = New-Object System.Security.Cryptography.SHA512CryptoServiceProvider }
+                "RIPEMD160" { $Provider = New-Object System.Security.Cryptography.CryptoServiceProvider }
+            }
+            $Provider.ComputeHash($InputStream) | Foreach-Object { [void]$StringBuilder.Append($_.ToString("X2")) }
+            $InputStream.Close()
+            $Object = New-Object -TypeName PSObject
+            $Object | Add-Member -MemberType NoteProperty -Name 'File' -value $File
+            $Object | Add-Member -MemberType NoteProperty -Name 'HashType' -Value $HashType
+            $Object | Add-Member -MemberType NoteProperty -Name 'Hash' -Value $StringBuilder.ToString()
+            $Object           
+        }
+    }
+}
+
 
 
 <# Initializers 
@@ -322,6 +385,11 @@ function Send-AIException
         [switch] $flush
 
     )
+
+
+    $dictProperties = New-Object 'system.collections.generic.dictionary[[string],[string]]'
+    $dictMeasures = New-Object 'system.collections.generic.dictionary[[string],[double]]'
+
     $client.TrackException($Exception) 
     #$client.TrackException($Exception, $HandledAt, $Properties, $Metrics, $Severity) 
 

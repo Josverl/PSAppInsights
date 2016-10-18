@@ -2,6 +2,19 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "PowerShell Script",
+            "type": "PowerShell",
+            "request": "launch",
+            "program": "${file}",
+            "args": [],
+            "cwd": "${file}"
+        }
+    ]
+}
+
+/*
+ 
+         {
             "name": "PowerShell Module",
             "type": "PowerShell",
             "request": "launch",
@@ -10,11 +23,7 @@
             "args": [],
             "cwd": "${fileDirname}"
         }
-
-    ]
-}
-
-/*
+ 
         {
             "name": "PowerShell Script",
             "type": "PowerShell",

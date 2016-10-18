@@ -12,9 +12,34 @@ Describe "PSAppInsights" {
 
     }
 
-    Context 'New Session' {
+
+        
+
+
+
+    Context 'New Non-PII Session' {
         
         $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
+
+
+        It 'can Init a new log AllowPII session' {
+
+            $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
+            $client = New-AISession -Key $key -AllowPII
+        
+            $client | Should not be $null
+            $client.InstrumentationKey -ieq $key | Should be $true
+        
+            $client.Context.User.UserAgent | Should be $Host.Name
+
+            #Check PII 
+            $client.Context.Device.Id      | Should be $env:COMPUTERNAME 
+            $client.Context.User.Id        | Should be $env:USERNAME
+
+        }
+
+
+
         $client = New-AISession -Key $key
 
         It 'can Init a new log session' {
@@ -27,12 +52,15 @@ Describe "PSAppInsights" {
             $client.Context.User.UserAgent | Should be $Host.Name
         }
         It 'can Init the log with user information'  {
-            $client.Context.User.UserAgent | Should be $Host.Name
-            $client.Context.User.Id        | Should be $env:USERNAME
+            $client.Context.User.UserAgent | Should  be $Host.Name
+            $client.Context.User.Id        | Should not be $env:USERNAME
+            $client.Context.User.Id        | Should not be $null
+
         }
 
         It 'can Init the log with Computer information' {
-            $client.Context.Device.Id              | Should be $env:COMPUTERNAME #Should not be $null
+            $client.Context.Device.Id              | Should not be $env:COMPUTERNAME #Should not be $null
+            $client.Context.Device.Id              | Should not be $null
             $client.Context.Device.OperatingSystem | Should not be $null
 
         }
