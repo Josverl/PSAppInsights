@@ -1,9 +1,11 @@
 ﻿<#
-    Add Azure Application Insight Tracing to Powershell Scripts and Modules
+    PowerShell App Insights Module
+    V0.3
+    Application Insight Tracing to Powershell Scripts and Modules
 
+Documentation : 
     Ref .Net : https://msdn.microsoft.com/en-us/library/microsoft.applicationinsights.aspx
-    
-    Ref: https://github.com/Microsoft/ApplicationInsights-JS/blob/master/API-reference.md
+    Ref JS   : https://github.com/Microsoft/ApplicationInsights-JS/blob/master/API-reference.md
 #>
 
 <#
@@ -388,12 +390,25 @@ function Send-AIException
 
     )
 
+    if ($todo ) { 
 
-    $dictProperties = New-Object 'system.collections.generic.dictionary[[string],[string]]'
-    $dictMeasures = New-Object 'system.collections.generic.dictionary[[string],[double]]'
+        $telemetryException = New-Object "Microsoft.ApplicationInsights.DataContracts.ExceptionTelemetry"  
+        $telemetryException.Exception = $_.Exception  
+
+        $dictProperties = New-Object 'system.collections.generic.dictionary[[string],[string]]'
+        $dictMetrics = New-Object 'system.collections.generic.dictionary[[string],[double]]'
+    
+        $telemetryException.Metrics = $dictMetrics ## FAILS:: ReadOnly 
+
+        $telemetryException.SeverityLevel = 4   # Low to High 
+    } 
+
 
     $client.TrackException($Exception) 
     #$client.TrackException($Exception, $HandledAt, $Properties, $Metrics, $Severity) 
+
+
+
 
     <#
 

@@ -1,4 +1,9 @@
-﻿$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+﻿<#
+    Pester tests for PowerShell App Insights Module
+    V0.3
+#>
+
+$here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.'
 
 #Module 
@@ -151,3 +156,15 @@ Describe "PSAppInsights" {
     }
 }
 
+<#
+TODO Improve Exception test 
+    try  
+    {  
+        $fileContent = Get-Content -Path "C:\Test.txt" -ErrorAction Stop  
+    }  
+    catch  
+    {  
+        $Caught = $_
+        $client.TrackException( $Caught.Exception) 
+    }
+#>
