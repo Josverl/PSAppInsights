@@ -12,19 +12,12 @@ Describe "PSAppInsights" {
 
     }
 
+    $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
 
-        
-
-
-
-    Context 'New Non-PII Session' {
-        
-        $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
-
+    Context 'New Session' {
 
         It 'can Init a new log AllowPII session' {
 
-            $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
             $client = New-AISession -Key $key -AllowPII
         
             $client | Should not be $null
@@ -144,13 +137,13 @@ Describe "PSAppInsights" {
         
         }
 
-        It 'can Flush the log session' {
-            {Flush-AITrace -Client $client }| Should not throw
+        It 'can Push/Flush the log session' {
+            {Push-AISession -Client $client }| Should not throw
 
         }
 
-        It 'can Flush the log session - Async '  -Skip  {
-            {Flush-AITrace -Client $client -NoWait }| Should not throw
+        It 'can Push/Flush the log session - Async '  -Skip  {
+            {Push-AISession -Client $client -NoWait }| Should not throw
 
         }
 

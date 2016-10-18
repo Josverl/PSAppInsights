@@ -73,6 +73,24 @@ function New-AISession
 
 
 <#
+.Synopsis
+   Flush the Application Insights Queue to the Service
+   TODO Add Alias FLUSH ?
+#>
+function Push-AISession
+{
+    [CmdletBinding()]
+    Param
+    (
+        #The AppInsights Client object to use.
+        [Parameter(Mandatory=$true)]
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client
+    )
+    $client.Flush()
+}
+
+
+<#
  Get-Hash Credits : Jeff Wouters
  ref: http://jeffwouters.nl/index.php/2013/12/get-hash-for-files-or-strings/
 #>
@@ -332,22 +350,6 @@ Dependency tracking collects telemetry about calls your app makes to databases a
 
 
 
-
-<#
-.Synopsis
-   Flush the Application Insights Queue to the Service
-#>
-function Flush-AITrace
-{
-    [CmdletBinding()]
-    Param
-    (
-        #The AppInsights Client object to use.
-        [Parameter(Mandatory=$true)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client
-    )
-    $client.Flush()
-}
 
 
 <#
