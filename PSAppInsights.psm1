@@ -12,7 +12,13 @@ $script:ErrNoClient = "Client - No Application Insights Client specified or init
 
 if ($false) {
 
- $request = New-Object 'Microsoft.ApplicationInsights.DataContracts.RequestTelemetry' #new RequestTelemetry(); $client = New-AISession -Key $key $request.Name = "My Request"; $request.Context.Properties["User Name"] = "Jos" $request.Context.Properties["Tenant Code"] = "tenantCode"
+ $request = New-Object 'Microsoft.ApplicationInsights.DataContracts.RequestTelemetry' #new RequestTelemetry();
+ $client = New-AISession -Key $key
+
+ $request.Name = "My Request";
+ $request.Context.Properties["User Name"] = "Jos"
+ $request.Context.Properties["Tenant Code"] = "tenantCode"
+
  $client.TrackRequest($request)
 
  #Also for 
@@ -82,13 +88,15 @@ function New-AISession
                     $client.Context.User.Id = $env:USERNAME 
                 } else { 
                     #Default to NON-PII 
-                    $client.Context.Device.Id = (Get-Hash -String $env:COMPUTERNAME -HashType MD5).hash 
-                    $client.Context.User.Id = (Get-Hash -String $env:USERNAME -HashType MD5).hash  
+                    $client.Context.Device.Id = (Get-StringHash -String $env:COMPUTERNAME -HashType MD5).hash 
+                    $client.Context.User.Id = (Get-StringHash -String $env:USERNAME -HashType MD5).hash  
                 }
                 if ($global:AIClient -eq $null ) {
                     #Save client in Global for re-use when not specified 
                     $global:AIClient = $client
                 } 
+                #Indicate actual / Synthethic events
+                $AIClient.Context.Operation.SyntheticSource = $Synthetic
 
                 return $client 
             } else { 
@@ -164,7 +172,7 @@ function Send-AITrace
 
 
         #include call stack  information (Default)
-        [switch] $Stack=$true,
+        [switch] $NoStack,
         
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
@@ -181,7 +189,7 @@ function Send-AITrace
     $dictProperties = New-Object 'system.collections.generic.dictionary[[string],[string]]'
 
     #Send the callstack
-    if ($Stack) { 
+    if ($NoStack -eq $false) { 
         $dictProperties = getCallerInfo -level 2
     }
     #Add the Properties to Dictionary
@@ -227,7 +235,7 @@ function Send-AIEvent
         #any custom metrics that need to be added to the event 
         [Hashtable]$Metrics,
         #include call stack  information (Default)
-        [switch] $Stack=$true,
+        [switch] $NoStack,
         #Directly flush the AI events to the service
         [switch] $Flush
 
@@ -242,7 +250,7 @@ function Send-AIEvent
     $dictMetrics = New-Object 'system.collections.generic.dictionary[[string],[double]]'
 
     #Send the callstack
-    if ($Stack) { 
+    if ($NoStack -eq $false) { 
         $dictProperties = getCallerInfo -level 2
     }
     #Add the Properties to Dictionary
@@ -309,7 +317,7 @@ function Send-AIMetric
         [Microsoft.ApplicationInsights.TelemetryClient] $Client = $global:AIClient,
 
         #include call stack  information (Default)
-        [switch] $Stack=$true,
+        [switch] $NoStack,
 
         #Directly flush the AI events to the service
         [switch] $Flush
@@ -323,7 +331,7 @@ function Send-AIMetric
     $dictProperties = New-Object 'system.collections.generic.dictionary[[string],[string]]'
 
     #Send the callstack
-    if ($Stack) { 
+    if ($NoStack -eq $false) { 
         $dictProperties = getCallerInfo -level 2
     }
     #Add the Properties to Dictionary
@@ -381,7 +389,7 @@ function Send-AIException
         [Microsoft.ApplicationInsights.TelemetryClient] $Client = $global:AIClient,
         
         #include call stack  information (Default)
-        [switch] $Stack=$true,
+        [switch] $NoStack,
 
         #Directly flush the AI events to the service
         [switch] $Flush
@@ -398,7 +406,7 @@ function Send-AIException
     $AIExeption = New-Object Microsoft.ApplicationInsights.DataContracts.ExceptionTelemetry
 <#
     #Send the callstack
-    if ($Stack) { 
+    if ($NoStack -eq $false) { 
         $dictProperties = getCallerInfo -level 2
         #? Add the caller info
         $AIExeption.Properties.Add($dictProperties)
@@ -489,7 +497,7 @@ function Send-AIPageView
         [Microsoft.ApplicationInsights.TelemetryClient] $Client = $global:AIClient,
         
         #include call stack  information (Default)
-        [switch] $Stack=$true,
+        [switch] $NoStack,
 
         #Directly flush the AI events to the service
         [switch] $Flush
@@ -505,7 +513,7 @@ function Send-AIPageView
     $dictMetrics = New-Object 'system.collections.generic.dictionary[[string],[double]]'
 
     #Send the callstack
-    if ($Stack) { 
+    if ($NoStack -eq $false) { 
         $dictProperties = getCallerInfo -level 2
     }
     #Add the Properties to Dictionary
@@ -544,11 +552,11 @@ function Send-AIPageView
 
 <#
  helper function 
- Get-Hash Credits : Jeff Wouters
- ref: http://jeffwouters.nl/index.php/2013/12/get-hash-for-files-or-strings/
+ Get-StringHash Credits : Jeff Wouters
+ ref: http://jeffwouters.nl/index.php/2013/12/Get-StringHash-for-files-or-strings/
 #>
 
-function Get-Hash {
+function Get-StringHash {
     [cmdletbinding()]
     param (
         [parameter(mandatory=$false,parametersetname="String")]$String,

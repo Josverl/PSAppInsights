@@ -110,7 +110,7 @@ Describe "PSAppInsights Module" {
         }
 
         It 'can log an event - NoStack' {
-            {Send-AIEvent -Client $client -Event "Test event - Simple" -Stack:$False -Verbose} | Should not throw 
+            {Send-AIEvent -Client $client -Event "Test event - Simple" -NoStack -Verbose} | Should not throw 
         
         }
 
