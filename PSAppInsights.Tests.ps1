@@ -1,7 +1,12 @@
-﻿<#
+﻿<#PSScriptInfo
+.DESCRIPTION 
     Pester tests for PowerShell App Insights Module
-    V0.3
+#Version is used in test 
+.VERSION 0.3
+.AUTHOR Jos Verlinde
+.GUID bcff6b0e-509e-4c9d-af31-dccc41e148d0
 #>
+
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.'
@@ -26,7 +31,7 @@ Describe "PSAppInsights Module" {
 
         It 'can Init a new log AllowPII session' {
 
-            $client = New-AISession -Key $key -AllowPII
+            $client = New-AISession -Key $key -AllowPII -Version "2.3.4"
         
             $client | Should not be $null
             $client.InstrumentationKey -ieq $key | Should be $true
@@ -37,14 +42,33 @@ Describe "PSAppInsights Module" {
             $client.Context.Device.Id      | Should be $env:COMPUTERNAME 
             $client.Context.User.Id        | Should be $env:USERNAME
 
+            #Check Version number detection
+            $Client.Context.Component.Version | should be "2.3.4"
+
         }
 
+        it 'can detect the calling script version ' {
+            $client = New-AISession -Key $key -AllowPII 
+
+            #Check Version number  (match this script ) 
+            $Client.Context.Component.Version | should be "0.3"  
 
 
-        $client = New-AISession -Key $key
+        }
 
+        it 'can log permon counters' {
+            Remove-Variable AIperfCollector -Scope Global -ErrorAction SilentlyContinue
+            { start-AIPerformanceCollector -key $key }| Should not throw
+            $Global:AIperfCollector | Should not be $null
+            #And a 2nd time 
+            { start-AIPerformanceCollector -key $key }| Should not throw
+            $Global:AIperfCollector | Should not be $null
+
+        }
         #Mark Pester traffic As Synthethic traffic
-        $AIClient.Context.Operation.SyntheticSource = $true
+        $SynthMarker= "Pester run $((get-date).ToString('g'))"
+        $client = New-AISession -Key $key -Synthetic $SynthMarker
+
 
         It 'can Init a new log session' {
 
@@ -53,6 +77,10 @@ Describe "PSAppInsights Module" {
         
             $client.Context.User.UserAgent | Should be $Host.Name
         }
+        it 'can mark synthetic traffic' {
+            $AIClient.Context.Operation.SyntheticSource | Should be $SynthMarker
+        }
+
         It 'can Init the log with user information'  {
             $client.Context.User.UserAgent | Should  be $Host.Name
             $client.Context.User.Id        | Should not be $env:USERNAME
@@ -116,7 +144,8 @@ Describe "PSAppInsights Module" {
 
 
         It 'can log an event - with metrics'  {
-            
+            # BUGBUG on the sending end 
+            # {"name":"Microsoft.ApplicationInsights.c90dd0dd3bee4525a172ddb55873d30a.Event","time":"2016-10-27T20:10:24.5050618Z","iKey":"c90dd0dd-3bee-4525-a172-ddb55873d30a","tags":{"ai.internal.sdkVersion":"dotnet: 2.1.0.26048","ai.device.osVersion":"10.0.14393","ai.operation.id":"db0c5074-8350-45b9-9c13-754fc8388ead","ai.session.id":"a9f87484-02b3-470d-a1b7-99189af7c34e","ai.user.userAgent":"Windows PowerShell ISE Host","ai.user.id":"ba3734482aa24856f1d253a5bae74e06","ai.device.id":"518aeec5d382166090a20484145b67f9"},"data":{"baseType":"EventData","baseData":{"ver":2,"name":"name is a required field for Microsoft.ApplicationInsights.DataContracts.EventTelemetry","properties":{"ScriptName":"<No file>","Command":"<ScriptBlock>","FunctionName":"<ScriptBlock>","ScriptLineNumber":"1"}}}}
             {Send-AIEvent -Client $client -Event "Test Event - Complex" -Metrics $MetricHash} | Should not throw 
         }
 
@@ -214,6 +243,12 @@ Describe "PSAppInsights Module" {
             {Push-AISession -Client $client -NoWait }| Should not throw
 
         }
+        it 'can stop loggin permon counters' {
+            { stop-AIPerformanceCollector }| Should not throw
+            $Global:AIperfCollector | Should be $null
+        }
+
+
 
     }
 }

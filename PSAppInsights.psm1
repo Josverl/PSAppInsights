@@ -28,7 +28,24 @@ if ($false) {
 
  $AIExeption = New-Object Microsoft.ApplicationInsights.DataContracts.ExceptionTelemetry
  $client.TrackEvent($AIExeption)
-
+<#
+        [TestMethod]
+        public void SerializeWritesPropertiesAsExpectedByEndpoint()
+        {
+            ExceptionTelemetry expected = CreateExceptionTelemetry();
+            expected.Properties.Add("TestProperty", "TestValue");
+            var item = TelemetryItemTestHelper.SerializeDeserializeTelemetryItem<ExceptionTelemetry, DataPlatformModel.ExceptionData>(expected);
+            Assert.Equal(expected.Properties.ToArray(), item.Data.BaseData.Properties.ToArray());
+        }
+        [TestMethod]
+        public void SerializeWritesMetricsAsExpectedByEndpoint()
+        {
+            ExceptionTelemetry expected = CreateExceptionTelemetry();
+            expected.Metrics.Add("TestMetric", 4.2);
+            var item = TelemetryItemTestHelper.SerializeDeserializeTelemetryItem<ExceptionTelemetry, DataPlatformModel.ExceptionData>(expected);
+            Assert.Equal(expected.Metrics.ToArray(), item.Data.BaseData.Measurements.ToArray());
+        }
+#>
 
 }
 
@@ -55,8 +72,10 @@ function New-AISession
         $Key ,
         [string]$SessionID = (New-Guid), 
         [string]$OperationID = (New-Guid), 
-        # Set to suppress sending messages in a test environment
-        [switch]$Synthetic,
+        #Version of the application or Component
+        $Version,
+        # Set to indicate messages sent from or during a test 
+        [string]$Synthetic = $null,
         
         #Allow PII in Traces 
         [switch]$AllowPII 
@@ -65,11 +84,13 @@ function New-AISession
     Process
     {
         try { 
+            Write-Verbose "create Telemetry client"
             $client = New-Object Microsoft.ApplicationInsights.TelemetryClient  
             if ($client) { 
+                Write-Verbose "Add Key, Session.id and Operation.id"
+                
                 $client.InstrumentationKey = $Key
                 $client.Context.Session.Id = $SessionID
-
                 #Operation : A generated value that correlates different events, so that you can find "Related items"
                 $client.Context.Operation.Id = $OperationID
 
@@ -78,23 +99,38 @@ function New-AISession
                 # or TelemetryClient.Context.Device.Id to identify the machine. 
                 # This information is attached to all events sent by the instance.
 
+                Write-Verbose "Add device.OS and User Agent"
                 $client.Context.Device.OperatingSystem = (Get-CimInstance Win32_OperatingSystem).version
-
-
                 $client.Context.User.UserAgent = $Host.Name
+
                 if ($AllowPII) {
+                    Write-Verbose "Add PII user and computer"
+
                     #Only if Explicitly noted
                     $client.Context.Device.Id = $env:COMPUTERNAME 
                     $client.Context.User.Id = $env:USERNAME 
                 } else { 
+                    Write-Verbose "Add NON-PII user and computer"
                     #Default to NON-PII 
                     $client.Context.Device.Id = (Get-StringHash -String $env:COMPUTERNAME -HashType MD5).hash 
                     $client.Context.User.Id = (Get-StringHash -String $env:USERNAME -HashType MD5).hash  
                 }
-                if ($global:AIClient -eq $null ) {
-                    #Save client in Global for re-use when not specified 
-                    $global:AIClient = $client
+                if ($global:AIClient -ne $null ) {
+                    Write-Verbose "replacing active telemetry client"
+                    Flush-AISession -Client $global:AIClient
+                    Remove-Variable AIClient -Scope Global
                 } 
+                #Save client in Global for re-use when not specified 
+                $global:AIClient = $client
+
+                if ($Version ) {
+                    write-verbose "use specified version"
+                    $client.Context.Component.Version = [string]($version)
+                } else {
+                    write-verbose "retrieve version of calling script or module."
+                    $client.Context.Component.Version = [string](getCallerVersion -level 2)
+                }
+
                 #Indicate actual / Synthethic events
                 $AIClient.Context.Operation.SyntheticSource = $Synthetic
 
@@ -544,6 +580,57 @@ function Send-AIPageView
     }
 }
 
+<#
+.Synopsis
+   Short description
+.DESCRIPTION
+   Long description
+.EXAMPLE
+   Example of how to use this cmdlet
+#>
+function start-AIPerformanceCollector
+{
+    [CmdletBinding()]
+    Param(
+        # The App Insights Key 
+        [Parameter(Mandatory=$true)] 
+        $Key
+        # @todo Set to suppress sending messages in a test environment
+        # [string]$Synthetic
+
+    )
+    if ($Global:AIperfCollector) { Stop-AIPerformanceCollector }
+    Write-Verbose "Create AI Performance Collector Instance"
+    $Global:AIperfCollector = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCollectorModule
+
+    Write-Verbose "Add ??APP_WIN32_PROC?? performance counters"
+        
+    $CollectionRequest = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCounterCollectionRequest -ArgumentList "??APP_WIN32_PROC??", "??APP_WIN32_PROC??"
+    $Global:AIperfCollector.Counters.Add( $CollectionRequest)
+
+
+    $CollectionRequest = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCounterCollectionRequest -ArgumentList "\Objects\Processes", "Processes"
+    $Global:AIperfCollector.Counters.Add( $CollectionRequest)
+
+<# Debug 
+    [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.EndpointAddress = 'http://localhost:8888/v2/track'
+#>    Write-Verbose "Initialize"
+    [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
+    $Global:AIperfCollector.Initialize( [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active )}
+
+function Stop-AIPerformanceCollector
+{
+    [CmdletBinding()]
+    Param()
+
+    if ($Global:AIperfCollector) {
+        Write-Verbose "Stoping Performance counter collection"
+        $Global:AIperfCollector.Dispose()
+        Remove-Variable AIperfCollector -Scope Global
+    }
+}
+
+
 
 <#------------------------------------------------------------------------------------------------------------------
     Helper Functions 
@@ -629,24 +716,87 @@ function getCallerInfo ($level = 2)
 }
 
 <#
-        #convert to hash 
-        Write-Verbose ("CallerInfo {0} {1} {2} {3}" -f 
-            $ScriptName,
-            $caller.ScriptLineNumber,
-            $caller.Command,
-            $caller.FunctionName
-        ) 
-        $hash = [PSObject]@{
-            ScriptName=$ScriptName;
-            ScriptLineNumber=$caller.ScriptLineNumber;
-            Command=$caller.Command;
-            FunctionName= $caller.FunctionName;
-        } 
-        #
-        foreach ($h in $hash.GetEnumerator()) {
-           $dict.Add($h.Name, $h.Value)
+    Helper function to get the calling script or module version#>
+function getCallerVersion 
+{
+[CmdletBinding()]
+param(
+    [int]$level = 2
+)
+    try { 
+        #Get the caller info
+        $caller = (Get-PSCallStack)[$level] 
+        #get only the script name
+        $ScriptName = '<unknown>'
+        if ($caller.Location) {
+            $ScriptName = ($caller.Location).Split(':')[0]
         }
+
+        $dict.Add('ScriptName', $ScriptName)
+        $dict.Add('ScriptLineNumber', $caller.ScriptLineNumber)
+        $dict.Add('Command', $caller.Command)
+        $dict.Add('FunctionName', $caller.FunctionName)
+
         return $dict
 
+    } catch { return $null}
+}
+
+<#
+    Helper function to get the calling script or module version
 #>
+function getCallerVersion 
+{
+[CmdletBinding()]
+param(
+    #Get version from X levels up in the call stack
+    [int]$level = 1
+)
+    Write-Verbose "getCallerVersion -level $level"
+    [Version]$V = $null
+    try { 
+        #Get the caller info
+        $caller = (Get-PSCallStack)[$level] 
+        #if script
+        if ( -NOT [string]::IsNullOrEmpty( $caller.ScriptName)){
+            $info = Test-ScriptFileInfo -Path $caller.ScriptName -ErrorAction SilentlyContinue
+            if ( $info ) {
+                $v = $info.Version
+                Write-Verbose "getCallerVersion found script version $v"
+                return $v
+            }
+        }       
+    } catch { }
+    Try {
+        #try module info based on the name, but with a psd1 extention
+        $Filename = [System.IO.Path]::ChangeExtension( $caller.ScriptName, 'psd1')
+        $info = Test-ModuleManifest -Path $Filename -ErrorAction SilentlyContinue
+        if ( $info ) {
+            $v = $info.Version
+            Write-Verbose "getCallerVersion found Module version $v"
+            return $v
+            break;
+        }
+    } catch {} # Continue 
+
+    try {
+        #try to find a version from the path and folder names 
+        $Folders= @( $Filename.Split('\') )
+        $found = $false
+        foreach( $f in $Folders ) {
+            Try { $V = [version]$f ; $found = $true} 
+            catch {}
+        }
+        if ($found) {
+            #return last found version
+            Write-Verbose "getCallerVersion found Folder version $v"
+            return $v
+        }
+    } catch {
+        Write-Verbose "getCallerVersion no version found"         
+        return $v
+    }
+    Write-Verbose "no version found"
+    return $v
+}
 
