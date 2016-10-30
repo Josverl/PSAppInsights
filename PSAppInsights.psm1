@@ -594,7 +594,10 @@ function start-AIPerformanceCollector
     Param(
         # The App Insights Key 
         [Parameter(Mandatory=$true)] 
-        $Key
+        $Key,
+        #Process Counters of the powershell process to collect 
+        [string[]]
+        $ProcessCounters = @( 'Handle Count', 'Working Set' )
         # @todo Set to suppress sending messages in a test environment
         # [string]$Synthetic
 
@@ -604,11 +607,14 @@ function start-AIPerformanceCollector
     $Global:AIperfCollector = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCollectorModule
 
     Write-Verbose "Add ??APP_WIN32_PROC?? performance counters"
-        
-    $CollectionRequest = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCounterCollectionRequest -ArgumentList "??APP_WIN32_PROC??", "??APP_WIN32_PROC??"
-    $Global:AIperfCollector.Counters.Add( $CollectionRequest)
-
-
+    #$ProcessName =  "??{0}??" -f ([System.Diagnostics.Process]::GetCurrentProcess()).ProcessName
+    $ProcessName =  ([System.Diagnostics.Process]::GetCurrentProcess()).ProcessName 
+    foreach ( $c in $ProcessCounters ) { 
+        $Counter = "\Process($ProcessName)\$c"
+        $CollectionRequest = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCounterCollectionRequest -ArgumentList $Counter, $c
+        $Global:AIperfCollector.Counters.Add( $CollectionRequest)
+    } 
+    #Add Processes
     $CollectionRequest = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCounterCollectionRequest -ArgumentList "\Objects\Processes", "Processes"
     $Global:AIperfCollector.Counters.Add( $CollectionRequest)
 
