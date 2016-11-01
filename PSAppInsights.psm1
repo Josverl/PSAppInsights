@@ -127,7 +127,7 @@ function New-AIClient
                 }
                 if ($Global:AISingleton.Client -ne $null ) {
                     Write-Verbose "replacing active telemetry client"
-                    Flush-AISession -Client $Global:AISingleton.Client
+                    Flush-AIClient -Client $Global:AISingleton.Client
                     $Global:AISingleton.Client = $null
                 } 
                 #Save client in Global for re-use when not specified 
@@ -160,10 +160,11 @@ function New-AIClient
    Flush the Application Insights Queue to the Service
    TODO Add Alias FLUSH ?
 #>
-function Push-AISession
+function Push-AIClient
 {
     [CmdletBinding()]
-    [Alias("Flush-AISession")]
+    [Alias("Flush-AIClient")]
+    [Alias("Flush-AISession")]  # Depricated 
 
     Param
     (

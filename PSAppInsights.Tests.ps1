@@ -52,19 +52,19 @@ Describe "PSAppInsights Module" {
 
         It 'can Init Device properties' {
 
-            { $TmtClient = New-AIClient -Key $key -Verbose -Init Device } | Should not Throw 
+            { $TmtClient = New-AIClient -Key $key  -Init Device } | Should not Throw 
         }
         it 'can Init  Domain properties' {    
 
-            { $TmtClient = New-AIClient -Key $key -Verbose -Init Domain } | Should not Throw 
+            { $TmtClient = New-AIClient -Key $key -Init Domain } | Should not Throw 
         }
         it 'can Init Operation Correlation' {    
 
-            {  $TmtClient = New-AIClient -Key $key -Verbose -Init Operation  } | Should not Throw 
+            {  $TmtClient = New-AIClient -Key $key -Init Operation  } | Should not Throw 
         }
         it 'can Init Device & Domain & Operation' {    
 
-            { $TmtClient = New-AIClient -Key $key -Verbose -Init @('Device', 'Domain', 'operation' ) } | Should not Throw 
+            { $TmtClient = New-AIClient -Key $key -Init @('Device', 'Domain', 'operation' ) } | Should not Throw 
         }
 
 
