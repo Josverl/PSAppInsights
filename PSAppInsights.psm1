@@ -1,6 +1,6 @@
 ﻿<#
     PowerShell App Insights Module
-    V0.3
+    V0.7.1
     Application Insight Tracing to Powershell Scripts and Modules
 
 Documentation : 
@@ -8,60 +8,33 @@ Documentation :
     Ref JS   : https://github.com/Microsoft/ApplicationInsights-JS/blob/master/API-reference.md
 #>
 
-$script:ErrNoClient = "Client - No Application Insights Client specified or initialized."
-
-if ($false) {
-
- $request = New-Object 'Microsoft.ApplicationInsights.DataContracts.RequestTelemetry' #new RequestTelemetry();
- $client = New-AISession -Key $key
-
- $request.Name = "My Request";
- $request.Context.Properties["User Name"] = "Jos"
- $request.Context.Properties["Tenant Code"] = "tenantCode"
-
- $client.TrackRequest($request)
-
- #Also for 
-
- $event = New-Object Microsoft.ApplicationInsights.DataContracts.EventTelemetry
- $client.TrackEvent($event)
-
- $AIExeption = New-Object Microsoft.ApplicationInsights.DataContracts.ExceptionTelemetry
- $client.TrackEvent($AIExeption)
-<#
-        [TestMethod]
-        public void SerializeWritesPropertiesAsExpectedByEndpoint()
-        {
-            ExceptionTelemetry expected = CreateExceptionTelemetry();
-            expected.Properties.Add("TestProperty", "TestValue");
-            var item = TelemetryItemTestHelper.SerializeDeserializeTelemetryItem<ExceptionTelemetry, DataPlatformModel.ExceptionData>(expected);
-            Assert.Equal(expected.Properties.ToArray(), item.Data.BaseData.Properties.ToArray());
-        }
-        [TestMethod]
-        public void SerializeWritesMetricsAsExpectedByEndpoint()
-        {
-            ExceptionTelemetry expected = CreateExceptionTelemetry();
-            expected.Metrics.Add("TestMetric", 4.2);
-            var item = TelemetryItemTestHelper.SerializeDeserializeTelemetryItem<ExceptionTelemetry, DataPlatformModel.ExceptionData>(expected);
-            Assert.Equal(expected.Metrics.ToArray(), item.Data.BaseData.Measurements.ToArray());
-        }
-#>
-
+$Global:AISingleton = @{
+    ErrNoClient = "Client - No Application Insights Client specified or initialized."
+    Configuration = $null    
+    #The current AI Client
+    Client = $null
+    #The Perfmon Collector
+    PerformanceCollector = $null
+    #Stack of current Operations
+    Operations = [System.Collections.Stack]::new()
 }
+
+$script:ErrNoClient = "Client - No Application Insights Client specified or initialized."
 
 
 <#
 .Synopsis
-   Start a new AI Session
+   Start a new AI Client 
 .DESCRIPTION
    Long description
 .EXAMPLE
    Example of how to use this cmdlet
 
 #>
-function New-AISession
+function New-AIClient
 {
     [CmdletBinding()]
+    [Alias('New-AISession')]
     [OutputType([Microsoft.ApplicationInsights.TelemetryClient])]
     Param
     (
@@ -76,16 +49,53 @@ function New-AISession
         $Version,
         # Set to indicate messages sent from or during a test 
         [string]$Synthetic = $null,
+
+        #Set of initializers - Default: Operation Correlation is enabled 
+        [Alias("Initializer")]
+        [ValidateSet('Domain','Device','Operation')]
+        [String[]] $Init = @(), 
         
         #Allow PII in Traces 
-        [switch]$AllowPII 
+        [switch]$AllowPII,
+
+        #Send AI traces via Fiddler for debugging
+        [switch]$Fiddler
+
     )
+
 
     Process
     {
         try { 
             Write-Verbose "create Telemetry client"
-            $client = New-Object Microsoft.ApplicationInsights.TelemetryClient  
+
+            # Is this a singleton that controls all New AI Client sessions from this moment 
+            [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
+
+            #optionally add Fiddler for debugging
+            if ($fiddler) { 
+                [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.EndpointAddress = 'http://localhost:8888/v2/track'
+            }
+            
+            $Global:AISingleton.Configuration = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active
+
+            if ($Init.Contains('Operation')) {
+                #Initializer for operation correlation 
+                $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
+                $Global:AISingleton.Configuration.TelemetryInitializers.Add($OpInit)
+            }
+            if ($Init.Contains('Domain')) {
+                $DomInit = [Microsoft.ApplicationInsights.WindowsServer.DomainNameRoleInstanceTelemetryInitializer]::new()
+                $Global:AISingleton.Configuration.TelemetryInitializers.Add($DomInit)
+            }
+
+            if ($Init.Contains('Device')) {
+                $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
+                $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
+            }
+            $client = [Microsoft.ApplicationInsights.TelemetryClient]::new($Global:AISingleton.Configuration)
+
+#            $client = New-Object Microsoft.ApplicationInsights.TelemetryClient  
             if ($client) { 
                 Write-Verbose "Add Key, Session.id and Operation.id"
                 
@@ -115,13 +125,13 @@ function New-AISession
                     $client.Context.Device.Id = (Get-StringHash -String $env:COMPUTERNAME -HashType MD5).hash 
                     $client.Context.User.Id = (Get-StringHash -String $env:USERNAME -HashType MD5).hash  
                 }
-                if ($global:AIClient -ne $null ) {
+                if ($Global:AISingleton.Client -ne $null ) {
                     Write-Verbose "replacing active telemetry client"
-                    Flush-AISession -Client $global:AIClient
-                    Remove-Variable AIClient -Scope Global
+                    Flush-AISession -Client $Global:AISingleton.Client
+                    $Global:AISingleton.Client = $null
                 } 
                 #Save client in Global for re-use when not specified 
-                $global:AIClient = $client
+                $Global:AISingleton.Client = $client
 
                 if ($Version ) {
                     write-verbose "use specified version"
@@ -132,7 +142,7 @@ function New-AISession
                 }
 
                 #Indicate actual / Synthethic events
-                $AIClient.Context.Operation.SyntheticSource = $Synthetic
+                $Global:AISingleton.Client.Context.Operation.SyntheticSource = $Synthetic
 
                 return $client 
             } else { 
@@ -159,7 +169,7 @@ function Push-AISession
     (
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $global:AIClient
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client
     )
     $client.Flush()
 }
@@ -203,7 +213,7 @@ function Send-AITrace
         [Parameter()]
         [Alias("Severity")]
         $SeverityLevel = [Microsoft.ApplicationInsights.DataContracts.SeverityLevel]::Information, 
-        #any custom Properties that need to be added to the event 
+        #any custom Properties that need to be added to the trace 
         [Hashtable]$Properties,
 
 
@@ -212,7 +222,7 @@ function Send-AITrace
         
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $global:AIClient,
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
 
         #Directly flush the AI events to the service
         [switch] $Flush
@@ -264,7 +274,7 @@ function Send-AIEvent
         [string] $Event,
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $global:AIClient,
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
        
         #any custom Properties that need to be added to the event 
         [Hashtable]$Properties,
@@ -302,7 +312,7 @@ function Send-AIEvent
         }
     }
     #Send the event 
-    $client.TrackEvent($Message, $dictProperties , $dictMetrics) 
+    $client.TrackEvent($Event, $dictProperties , $dictMetrics) 
     
     if ($Flush) { 
         $client.Flush()
@@ -350,7 +360,7 @@ function Send-AIMetric
 
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $global:AIClient,
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
 
         #include call stack  information (Default)
         [switch] $NoStack,
@@ -422,7 +432,7 @@ function Send-AIException
 
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $global:AIClient,
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
         
         #include call stack  information (Default)
         [switch] $NoStack,
@@ -530,7 +540,7 @@ function Send-AIPageView
 
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $global:AIClient,
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
         
         #include call stack  information (Default)
         [switch] $NoStack,
@@ -602,9 +612,9 @@ function start-AIPerformanceCollector
         # [string]$Synthetic
 
     )
-    if ($Global:AIperfCollector) { Stop-AIPerformanceCollector }
+    if ($Global:AISingleton.PerformanceCollector) { Stop-AIPerformanceCollector }
     Write-Verbose "Create AI Performance Collector Instance"
-    $Global:AIperfCollector = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCollectorModule
+    $Global:AISingleton.PerformanceCollector = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCollectorModule
 
     Write-Verbose "Add ??APP_WIN32_PROC?? performance counters"
     #$ProcessName =  "??{0}??" -f ([System.Diagnostics.Process]::GetCurrentProcess()).ProcessName
@@ -612,27 +622,27 @@ function start-AIPerformanceCollector
     foreach ( $c in $ProcessCounters ) { 
         $Counter = "\Process($ProcessName)\$c"
         $CollectionRequest = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCounterCollectionRequest -ArgumentList $Counter, $c
-        $Global:AIperfCollector.Counters.Add( $CollectionRequest)
+        $Global:AISingleton.PerformanceCollector.Counters.Add( $CollectionRequest)
     } 
     #Add Processes
     $CollectionRequest = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCounterCollectionRequest -ArgumentList "\Objects\Processes", "Processes"
-    $Global:AIperfCollector.Counters.Add( $CollectionRequest)
+    $Global:AISingleton.PerformanceCollector.Counters.Add( $CollectionRequest)
 
 <# Debug 
     [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.EndpointAddress = 'http://localhost:8888/v2/track'
 #>    Write-Verbose "Initialize"
     [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
-    $Global:AIperfCollector.Initialize( [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active )}
+    $Global:AISingleton.PerformanceCollector.Initialize( [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active )}
 
 function Stop-AIPerformanceCollector
 {
     [CmdletBinding()]
     Param()
 
-    if ($Global:AIperfCollector) {
+    if ($Global:AISingleton.PerformanceCollector) {
         Write-Verbose "Stoping Performance counter collection"
-        $Global:AIperfCollector.Dispose()
-        Remove-Variable AIperfCollector -Scope Global
+        $Global:AISingleton.PerformanceCollector.Dispose()
+        $Global:AISingleton.PerformanceCollector = $null
     }
 }
 

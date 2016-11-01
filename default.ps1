@@ -37,6 +37,7 @@ Properties {
 
     # Your NuGet API key for the PSGallery.  
     $NuGetApiKey = (Get-StoredCredential  -Target 'PSGallery:NuGetApiKey').GetNetworkCredential().Password
+
 }
 FormatTaskName "|>-------- {0} --------<|"
 

@@ -32,7 +32,9 @@ Describe "PSAppInsights Module" {
         It 'can Init a new log AllowPII session' {
 
             $client = New-AISession -Key $key -AllowPII -Version "2.3.4"
-        
+            
+            $Global:AISingleton.Client | Should not be $null
+
             $client | Should not be $null
             $client.InstrumentationKey -ieq $key | Should be $true
         
@@ -47,22 +49,41 @@ Describe "PSAppInsights Module" {
 
         }
 
+
+        It 'can Init Device properties' {
+
+            { $TmtClient = New-AIClient -Key $key -Verbose -Init Device } | Should not Throw 
+        }
+        it 'can Init  Domain properties' {    
+
+            { $TmtClient = New-AIClient -Key $key -Verbose -Init Domain } | Should not Throw 
+        }
+        it 'can Init Operation Correlation' {    
+
+            {  $TmtClient = New-AIClient -Key $key -Verbose -Init Operation  } | Should not Throw 
+        }
+        it 'can Init Device & Domain & Operation' {    
+
+            { $TmtClient = New-AIClient -Key $key -Verbose -Init @('Device', 'Domain', 'operation' ) } | Should not Throw 
+        }
+
+
         it 'can detect the calling script version ' {
             $client = New-AISession -Key $key -AllowPII 
 
             #Check Version number  (match this script ) 
             $Client.Context.Component.Version | should be "0.3"  
 
-
         }
 
         it 'can log permon counters' {
-            Remove-Variable AIperfCollector -Scope Global -ErrorAction SilentlyContinue
+            $Global:AISingleton.PerformanceCollector = $null
             { start-AIPerformanceCollector -key $key }| Should not throw
-            $Global:AIperfCollector | Should not be $null
+            $Global:AISingleton.PerformanceCollector | Should not be $null
+
             #And a 2nd time 
             { start-AIPerformanceCollector -key $key }| Should not throw
-            $Global:AIperfCollector | Should not be $null
+            $Global:AISingleton.PerformanceCollector | Should not be $null
 
         }
         #Mark Pester traffic As Synthethic traffic
@@ -78,7 +99,7 @@ Describe "PSAppInsights Module" {
             $client.Context.User.UserAgent | Should be $Host.Name
         }
         it 'can mark synthetic traffic' {
-            $AIClient.Context.Operation.SyntheticSource | Should be $SynthMarker
+            $AISingleton.Client.Context.Operation.SyntheticSource | Should be $SynthMarker
         }
 
         It 'can Init the log with user information'  {
