@@ -7,14 +7,15 @@
 .GUID bcff6b0e-509e-4c9d-af31-dccc41e148d0
 #>
 
-
+<# 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.'
 
 #Module 
 $sut = $sut.Replace('.ps1', '.psd1') 
-Write-Verbose "$here\$sut" 
-import-module "$here\$sut" -force 
+Write-Verbose "$here\$sut" #>
+
+Import-Module ".\PSAppInsights.psd1" -Force 
 
 Describe "PSAppInsights Module" {
     It "loads the AI Dll" {
@@ -31,7 +32,7 @@ Describe "PSAppInsights Module" {
 
         It 'can Init a new log AllowPII session' {
 
-            $client = New-AISession -Key $key -AllowPII -Version "2.3.4"
+            $client = New-AIClient -Key $key -AllowPII -Version "2.3.4"
             
             $Global:AISingleton.Client | Should not be $null
 
@@ -69,7 +70,7 @@ Describe "PSAppInsights Module" {
 
 
         it 'can detect the calling script version ' {
-            $client = New-AISession -Key $key -AllowPII 
+            $client = New-AIClient -Key $key -AllowPII 
 
             #Check Version number  (match this script ) 
             $Client.Context.Component.Version | should be "0.3"  
@@ -88,7 +89,7 @@ Describe "PSAppInsights Module" {
         }
         #Mark Pester traffic As Synthethic traffic
         $SynthMarker= "Pester run $((get-date).ToString('g'))"
-        $client = New-AISession -Key $key -Synthetic $SynthMarker
+        $client = New-AIClient -Key $key -Synthetic $SynthMarker
 
 
         It 'can Init a new log session' {
