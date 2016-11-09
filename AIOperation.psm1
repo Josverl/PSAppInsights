@@ -16,3 +16,20 @@ using (var operation = telemetry.StartOperation<RequestTelemetry>("operationName
 } // When operation is disposed, telemetry item is sent.
 
 #>
+
+
+
+[Microsoft.ApplicationInsights.Extensibility.Implementation.OperationContext]
+
+[Microsoft.ApplicationInsights.Extensibility.Implementation.OperationTelemetry]
+
+[Microsoft.ApplicationInsights.OperationTelemetryExtensions]::Start
+[Microsoft.ApplicationInsights.OperationTelemetryExtensions]::Stop
+[Microsoft.ApplicationInsights.OperationTelemetryExtensions]::GenerateOperationId
+
+
+[Microsoft.ApplicationInsights.OperationTelemetryExtensions]::Start.OverloadDefinitions
+# static void Start(Microsoft.ApplicationInsights.Extensibility.Implementation.OperationTelemetry telemetry)
+
+[Microsoft.ApplicationInsights.OperationTelemetryExtensions]::Stop.OverloadDefinitions
+[Microsoft.ApplicationInsights.OperationTelemetryExtensions]::GenerateOperationId.OverloadDefinitions

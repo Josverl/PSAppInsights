@@ -31,7 +31,7 @@ Properties {
         'scratch','build.ps1','default.ps1'
     )
 
-    $TestRepository = "DevRepo" #$null
+    $TestRepository = "Dev" #$null
     # Name of the repository you wish to publish to. Default repo is the PSGallery.
     $PublishRepository = "PSGallery" #$null
 

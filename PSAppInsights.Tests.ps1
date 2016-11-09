@@ -252,19 +252,12 @@ Describe "PSAppInsights Module" {
         #-----------------------------------------
 
 
-        It 'can log and trace a dependency' {
-        
-        }
 
         It 'can Push/Flush the log session' {
             {Push-AISession -Client $client }| Should not throw
 
         }
 
-        It 'can Push/Flush the log session - Async '  -Skip  {
-            {Push-AISession -Client $client -NoWait }| Should not throw
-
-        }
         it 'can stop loggin permon counters' {
             { stop-AIPerformanceCollector }| Should not throw
             $Global:AIperfCollector | Should be $null
