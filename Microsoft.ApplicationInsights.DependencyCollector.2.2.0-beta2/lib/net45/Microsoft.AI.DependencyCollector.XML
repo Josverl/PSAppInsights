@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<doc>
+<doc xml:lang="en">
     <assembly>
         <name>Microsoft.AI.DependencyCollector</name>
     </assembly>
@@ -850,7 +850,7 @@
              Common helper for all End Callbacks.
             </summary>
             <param name="context">The context.</param>        
-            <param name="exception">The exception object if any.</param>
+            <param name="exceptionObj">The exception object if any.</param>
             <param name="thisObj">This object.</param>
             <param name="isAsync">Whether the End is for an async invocation.</param>        
         </member>
