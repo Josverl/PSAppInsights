@@ -36,11 +36,11 @@ PowerShellVersion = '4.0'
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
 NestedModules = @(  
     #Application Insights Dlls that are needed for the exposed functionality 
-    '.\Microsoft.ApplicationInsights..2.2.0-beta2\lib\net45\Microsoft.ApplicationInsights.dll',
-    '.\Microsoft.ApplicationInsights.WindowsServer..2.2.0-beta2\lib\net45\Microsoft.AI.WindowsServer.dll',
-    '.\Microsoft.ApplicationInsights.PerfCounterCollector..2.2.0-beta2\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
+    '.\Microsoft.ApplicationInsights.2.2.0-beta2\lib\net45\Microsoft.ApplicationInsights.dll',
+    '.\Microsoft.ApplicationInsights.WindowsServer.2.2.0-beta2\lib\net45\Microsoft.AI.WindowsServer.dll',
+    '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.2.0-beta2\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
 #not yet used
-#    '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel..2.2.0-beta2\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll',
+#    '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.2.0-beta2\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll',
     #And the additional powershell modules 
     '.\AIPerformanceCollector.psm1',
     '.\AIDependency.psm1',
@@ -54,10 +54,10 @@ NestedModules = @(
 <#
 NestedModules = @(  
     #Application Insights Dlls that are needed for the exposed functionality 
-    '.\Microsoft.ApplicationInsights..2.2.0-beta2\lib\net45\Microsoft.ApplicationInsights.dll',
-    '.\Microsoft.ApplicationInsights.WindowsServer..2.2.0-beta2\lib\net45\Microsoft.AI.WindowsServer.dll',
-    '.\Microsoft.ApplicationInsights.PerfCounterCollector..2.2.0-beta2\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
-#    '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel..2.2.0-beta2\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll',
+    '.\Microsoft.ApplicationInsights.2.2.0-beta2\lib\net45\Microsoft.ApplicationInsights.dll',
+    '.\Microsoft.ApplicationInsights.WindowsServer.2.2.0-beta2\lib\net45\Microsoft.AI.WindowsServer.dll',
+    '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.2.0-beta2\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
+#    '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.2.0-beta2\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll',
     #And the additional powershell modules 
     '.\AIPerformanceCollector.psm1',
     '.\AIException.psm1',                   
