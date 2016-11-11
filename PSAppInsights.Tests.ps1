@@ -15,6 +15,7 @@ $sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.'
 $sut = $sut.Replace('.ps1', '.psd1') 
 Write-Verbose "$here\$sut" #>
 
+Get-Module psappInsights -All | Remove-Module
 Import-Module ".\PSAppInsights.psd1" -Force 
 
 Describe "PSAppInsights Module" {
@@ -27,6 +28,7 @@ Describe "PSAppInsights Module" {
     $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
     $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 
 
+   
 
     Context 'New Session' {
 
@@ -151,16 +153,19 @@ Describe "PSAppInsights Module" {
         }
 
         #-----------------------------------------
-
-        It 'can log an event - Simple' {
-            {Send-AIEvent -Client $client -Event "Test event - Simple" } | Should not throw 
-            
+        
+        It 'can log an event - Simple , implicit' {
             #Using Global
-            {Send-AIEvent -Event "Test event - Simple" } | Should not throw 
+            {Send-AIEvent -Event "Test event - Simple Implicit" } | Should not throw 
         }
 
+        It 'can log an event - Simple , explicit' {
+            {Send-AIEvent -Client $client -Event "Test event - Simple Explicit" } | Should not throw 
+        }
+
+
         It 'can log an event - NoStack' {
-            {Send-AIEvent -Client $client -Event "Test event - Simple" -NoStack -Verbose} | Should not throw 
+            {Send-AIEvent -Client $client -Event "Test event - Simple, no stack" -NoStack } | Should not throw 
         
         }
 
@@ -254,13 +259,14 @@ Describe "PSAppInsights Module" {
 
 
         It 'can Push/Flush the log session' {
-            {Push-AISession -Client $client }| Should not throw
+            {Flush-AIClient -Client $client }| Should not throw
+            {Push-AIClient -Client $client }| Should not throw
 
         }
 
-        it 'can stop loggin permon counters' {
+        it 'can stop logging permon counters' {
             { stop-AIPerformanceCollector }| Should not throw
-            $Global:AIperfCollector | Should be $null
+            $Global:AISingleton.PerformanceCollector | Should be $null
         }
 
 
@@ -268,7 +274,3 @@ Describe "PSAppInsights Module" {
     }
 }
 
-<#
-TODO Improve Exception test 
-
-#>

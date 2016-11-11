@@ -32,7 +32,7 @@ function Send-AIEvent
     )
     #Check for a specified AI client
     if ($Client -eq $null) {
-        throw [System.Management.Automation.PSArgumentNullException]::new($script:ErrNoClient)
+        throw [System.Management.Automation.PSArgumentNullException]::new($Global:AISingleton.ErrNoClient)
     }
 
     #Setup dictionaries     
