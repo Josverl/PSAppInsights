@@ -28,7 +28,12 @@ Describe "PSAppInsights Module" {
     $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
     $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 
 
-   
+       
+
+    It 'can log live metrics' {
+        { Start-AILiveMetrics -Key $key } | Should not Throw
+        $Global:AISingleton.QuickPulse | Should not be $null
+    }
 
     Context 'New Session' {
 
@@ -72,7 +77,7 @@ Describe "PSAppInsights Module" {
 
 
         it 'can detect the calling script version ' {
-            $client = New-AIClient -Key $key -AllowPII 
+            $client = New-AIClient -Key $key -AllowPII -Init Device, Domain, Operation
 
             #Check Version number  (match this script ) 
             $Client.Context.Component.Version | should be "0.3"  
@@ -269,6 +274,10 @@ Describe "PSAppInsights Module" {
             $Global:AISingleton.PerformanceCollector | Should be $null
         }
 
+        It 'can stop loggin log live metrics' {
+            { Stop-AILiveMetrics } | Should not Throw
+            $Global:AISingleton.QuickPulse | Should be $null
+        }
 
 
     }

@@ -15,6 +15,8 @@ $Global:AISingleton = @{
     Client = $null
     #The Perfmon Collector
     PerformanceCollector = $null
+    #QuickPulse aka Live Metrics Stream
+    QuickPulse = $null
     #Stack of current Operations
     Operations = [System.Collections.Stack]::new()
 }
@@ -42,7 +44,7 @@ function New-AIClient
         [Parameter(Mandatory=$true,
                    ValueFromPipelineByPropertyName=$true,
                    Position=0)]
-        $Key ,
+        $Key,
         [string]$SessionID = (New-Guid), 
         [string]$OperationID = (New-Guid), 
         #Version of the application or Component
@@ -69,7 +71,7 @@ function New-AIClient
         try { 
             Write-Verbose "create Telemetry client"
 
-            # Is this a singleton that controls all New AI Client sessions from this moment 
+            # This is a singleton that controls all New AI Client sessions for this process from this moment 
             [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
 
             #optionally add Fiddler for debugging
