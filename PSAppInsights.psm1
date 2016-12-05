@@ -54,7 +54,7 @@ function New-AIClient
 
         #Set of initializers - Default: Operation Correlation is enabled 
         [Alias("Initializer")]
-        [ValidateSet('Domain','Device','Operation')]
+        [ValidateSet('Domain','Device','Operation','Dependency')]
         [String[]] $Init = @(), 
         
         #Allow PII in Traces 
@@ -95,6 +95,18 @@ function New-AIClient
                 $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
             }
+
+            if ($Init.Contains('Dependency')) {
+                $Dependency = [Microsoft.ApplicationInsights.DependencyCollector.DependencyTrackingTelemetryModule]::new();
+                $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
+                $TelemetryModules.Modules.Add($Dependency);
+            }
+
+            $Global:AISingleton.Configuration.TelemetryInitializers | where {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} | ForEach { $_.Initialize($Global:AISingleton.Configuration); }
+		    $Global:AISingleton.Configuration.TelemetryProcessorChain.TelemetryProcessors | where {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} | ForEach { $_.Initialize($Global:AISingleton.Configuration); }
+            $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
+            $TelemetryModules.Modules | where {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} | ForEach { $_.Initialize($Global:AISingleton.Configuration); }
+
             $client = [Microsoft.ApplicationInsights.TelemetryClient]::new($Global:AISingleton.Configuration)
 
 #            $client = New-Object Microsoft.ApplicationInsights.TelemetryClient  
