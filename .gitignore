@@ -1,6 +1,4 @@
 /Release
 /.vscode
-Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.1.0/lib/net45/Microsoft.AI.ServerTelemetryChannel.XML
-Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.1.0/lib/net40/Microsoft.AI.ServerTelemetryChannel.XML
-Scratch/
-Setup/
+/Scratch
+/Setup

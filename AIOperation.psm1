@@ -18,12 +18,21 @@ using (var operation = telemetry.StartOperation<RequestTelemetry>("operationName
 #>
 
 
+#ToDo - Seperate this to Start-AIOperation 
+            if ($Initializer.Contains('Operation')) {
+                #Initializer for operation correlation 
+                $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
+                $Global:AISingleton.Configuration.TelemetryInitializers.Add($OpInit)
+            }
+
+
 
 [Microsoft.ApplicationInsights.Extensibility.Implementation.OperationContext]
 
 [Microsoft.ApplicationInsights.Extensibility.Implementation.OperationTelemetry]
+new-object 'Microsoft.ApplicationInsights.Extensibility.Implementation.OperationTelemetry'
 
-[Microsoft.ApplicationInsights.OperationTelemetryExtensions]::Start
+[Microsoft.ApplicationInsights.OperationTelemetryExtensions]::Start( $OperationTelemetry) 
 [Microsoft.ApplicationInsights.OperationTelemetryExtensions]::Stop
 [Microsoft.ApplicationInsights.OperationTelemetryExtensions]::GenerateOperationId
 

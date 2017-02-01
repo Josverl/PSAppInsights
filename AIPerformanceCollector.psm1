@@ -156,10 +156,10 @@ Param
 (
     # Param1 help description
     [Parameter(Mandatory=$false)]
-    [string]$Key= [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey , #Get earlier provided / current key
+    [string]$Key= [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey  #Get earlier provided / current key
         
     # DisableFullTelemetryItems - #Needs QuickPulse Processor to provide statistics
-    [switch]$DisableFullTelemetryItems
+    #[switch]$DisableFullTelemetryItems
 )
 
     #Make sure a Key is set if one is provided
@@ -180,8 +180,10 @@ Param
 
     #Create a new QuickPulse / LiveMetric Processor
     $Global:AISingleton.QuickPulse = [Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse.QuickPulseTelemetryModule]::new()
+
     #Copy the settings 
-    $Global:AISingleton.QuickPulse.DisableFullTelemetryItems = $DisableFullTelemetryItems
+    # $Global:AISingleton.QuickPulse.DisableFullTelemetryItems = $DisableFullTelemetryItems
+
     $Global:AISingleton.QuickPulse.Initialize( [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active )
 }
 

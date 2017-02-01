@@ -269,6 +269,11 @@ Describe "PSAppInsights Module" {
 
         }
 
+        It 'can close the log session' {
+            {Stop-AIClient -Client $client }| Should not throw
+        }
+
+
         it 'can stop logging permon counters' {
             { stop-AIPerformanceCollector }| Should not throw
             $Global:AISingleton.PerformanceCollector | Should be $null

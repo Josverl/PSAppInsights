@@ -21,9 +21,6 @@ $Global:AISingleton = @{
     Operations = [System.Collections.Stack]::new()
 }
 
-$script:ErrNoClient = "Client - No Application Insights Client specified or initialized."
-
-
 <#
 .Synopsis
    Start a new AI Client 
@@ -52,10 +49,10 @@ function New-AIClient
         # Set to indicate messages sent from or during a test 
         [string]$Synthetic = $null,
 
-        #Set of initializers - Default: Operation Correlation is enabled 
-        [Alias("Initializer")]
+        #Set of telemetry initializers to starts 
+        [Alias("Init")]
         [ValidateSet('Domain','Device','Operation')]
-        [String[]] $Init = @(), 
+        [String[]] $Initializer = @(), 
         
         #Allow PII in Traces 
         [switch]$AllowPII,
@@ -73,6 +70,7 @@ function New-AIClient
 
             # This is a singleton that controls all New AI Client sessions for this process from this moment 
             [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
+            [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.DisableTelemetry = $false
 
             #optionally add Fiddler for debugging
             if ($fiddler) { 
@@ -81,23 +79,22 @@ function New-AIClient
             
             $Global:AISingleton.Configuration = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active
 
-            if ($Init.Contains('Operation')) {
+            if ($Initializer.Contains('Operation')) {
                 #Initializer for operation correlation 
                 $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($OpInit)
             }
-            if ($Init.Contains('Domain')) {
+            if ($Initializer.Contains('Domain')) {
                 $DomInit = [Microsoft.ApplicationInsights.WindowsServer.DomainNameRoleInstanceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DomInit)
             }
 
-            if ($Init.Contains('Device')) {
+            if ($Initializer.Contains('Device')) {
                 $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
             }
             $client = [Microsoft.ApplicationInsights.TelemetryClient]::new($Global:AISingleton.Configuration)
 
-#            $client = New-Object Microsoft.ApplicationInsights.TelemetryClient  
             if ($client) { 
                 Write-Verbose "Add Key, Session.id and Operation.id"
                 
@@ -116,13 +113,13 @@ function New-AIClient
                 $client.Context.User.UserAgent = $Host.Name
 
                 if ($AllowPII) {
-                    Write-Verbose "Add PII user and computer"
+                    Write-Verbose "Add PII user and computer information"
 
                     #Only if Explicitly noted
                     $client.Context.Device.Id = $env:COMPUTERNAME 
                     $client.Context.User.Id = $env:USERNAME 
                 } else { 
-                    Write-Verbose "Add NON-PII user and computer"
+                    Write-Verbose "Add NON-PII user and computer identifiers"
                     #Default to NON-PII 
                     $client.Context.Device.Id = (Get-StringHash -String $env:COMPUTERNAME -HashType MD5).hash 
                     $client.Context.User.Id = (Get-StringHash -String $env:USERNAME -HashType MD5).hash  
@@ -177,3 +174,30 @@ function Push-AIClient
     $client.Flush()
 }
 
+<#
+.Synopsis
+    Stop and flush the App Insights telemetry client, and disables the per-process config.
+.EXAMPLE
+    Stop-AIClient 
+.EXAMPLE
+    Stop-AIClient -Client $TelemetryClient
+#>
+function Stop-AIClient
+{
+    [CmdletBinding()]
+    [OutputType([void])]
+    Param
+    (
+        # The Telemetry client to flush and stop, defaults to the
+        [Parameter(Mandatory=$false)]
+        $Client = $Global:AISingleton.Client
+    )
+    if ($Client) {
+        Write-Verbose "Stopping telemetry client"
+        Flush-AIClient -Client $Client
+        #And disable telemetry for 
+        [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.DisableTelemetry = $true
+    } else {
+        Write-Warning "No AppInsights telemetry client active"
+    }
+}

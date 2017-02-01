@@ -12,33 +12,3 @@
     ]
 }
 
-/*
- 
-         {
-            "name": "PowerShell Module",
-            "type": "PowerShell",
-            "request": "launch",
-            //"program": "get-childitem $PWD",
-            "program": "& {import-module .\\PSAppInsights.psd1 -force; New-AISession}",
-            "args": [],
-            "cwd": "${fileDirname}"
-        }
- 
-        {
-            "name": "PowerShell Script",
-            "type": "PowerShell",
-            "request": "launch",
-            "program": "${file}",
-            "args": [],
-            "cwd": "${file}"
-        },
-
-${workspaceRoot} the path of the folder opened in VS Code
-${file} the current opened file
-${relativeFile} the current opened file relative to workspaceRoot
-${fileBasename} the current opened file's basename
-${fileDirname} the current opened file's dirname
-${fileExtname} the current opened file's extension
-${cwd} the task runner's current working directory on startup
-
-*/
