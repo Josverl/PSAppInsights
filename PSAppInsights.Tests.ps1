@@ -15,7 +15,7 @@ $sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.'
 $sut = $sut.Replace('.ps1', '.psd1') 
 Write-Verbose "$here\$sut" #>
 
-Get-Module psappInsights -All | Remove-Module
+Get-Module psappInsights -All | Remove-Module -Force
 Import-Module ".\PSAppInsights.psd1" -Force 
 
 Describe "PSAppInsights Module" {
