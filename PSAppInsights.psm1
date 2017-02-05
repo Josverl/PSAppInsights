@@ -49,10 +49,10 @@ function New-AIClient
         # Set to indicate messages sent from or during a test 
         [string]$Synthetic = $null,
 
-        #Set of telemetry initializers to starts 
-        [Alias("Init")]
-        [ValidateSet('Domain','Device','Operation')]
-        [String[]] $Initializer = @(), 
+        #Set of initializers - Default: Operation Correlation is enabled 
+        [Alias("Initializer")]
+        [ValidateSet('Domain','Device','Operation','Dependency')]
+        [String[]] $Init = @(), 
         
         #Allow PII in Traces 
         [switch]$AllowPII,
@@ -78,21 +78,41 @@ function New-AIClient
             }
             
             $Global:AISingleton.Configuration = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active
-
+            # Start the initialisers specified
             if ($Initializer.Contains('Operation')) {
                 #Initializer for operation correlation 
                 $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($OpInit)
             }
+            #Add domain initiliser to add domain and machine info 
             if ($Initializer.Contains('Domain')) {
                 $DomInit = [Microsoft.ApplicationInsights.WindowsServer.DomainNameRoleInstanceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DomInit)
             }
-
+            #Add device initiliser to add client info 
             if ($Initializer.Contains('Device')) {
                 $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
             }
+            #Add dependency collector to (automatically ?) measure dependencies 
+            if ($Init.Contains('Dependency')) {
+                $Dependency = [Microsoft.ApplicationInsights.DependencyCollector.DependencyTrackingTelemetryModule]::new();
+                $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
+                $TelemetryModules.Modules.Add($Dependency);
+            }
+            #Now that they are added, they still need to be initialised
+            #Lets do it
+            $Global:AISingleton.Configuration.TelemetryInitializers | 
+                Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
+                ForEach-Object { $_.Initialize($Global:AISingleton.Configuration); }
+		    $Global:AISingleton.Configuration.TelemetryProcessorChain.TelemetryProcessors |
+                 Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
+                  ForEach-Object { $_.Initialize($Global:AISingleton.Configuration); }
+            $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
+            $TelemetryModules.Modules | 
+                Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
+                ForEach-Object { $_.Initialize($Global:AISingleton.Configuration); }
+            #Time to start the client 
             $client = [Microsoft.ApplicationInsights.TelemetryClient]::new($Global:AISingleton.Configuration)
 
             if ($client) { 
@@ -107,9 +127,13 @@ function New-AIClient
                 # set properties such as TelemetryClient.Context.User.Id to track users and sessions, 
                 # or TelemetryClient.Context.Device.Id to identify the machine. 
                 # This information is attached to all events sent by the instance.
-
+                
                 Write-Verbose "Add device.OS and User Agent"
-                $client.Context.Device.OperatingSystem = (Get-CimInstance Win32_OperatingSystem).version
+                #OS cannot be read in Azure automation, handle gracefully
+                $OS = Get-CimInstance -ClassName 'Win32_OperatingSystem' -ErrorAction SilentlyContinue
+                if ($OS) {
+                    $client.Context.Device.OperatingSystem = $OS.version
+                }
                 $client.Context.User.UserAgent = $Host.Name
 
                 if ($AllowPII) {

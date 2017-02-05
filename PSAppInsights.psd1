@@ -30,6 +30,9 @@
         '.\Microsoft.ApplicationInsights.2.2.0-beta2\lib\net45\Microsoft.ApplicationInsights.dll',
         '.\Microsoft.ApplicationInsights.WindowsServer.2.2.0-beta2\lib\net45\Microsoft.AI.WindowsServer.dll',
         '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.2.0-beta2\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
+        #to track dependencies
+        '.\Microsoft.ApplicationInsights.Agent.Intercept.2.0.1\lib\net45\Microsoft.AI.Agent.Intercept.dll',
+        '.\Microsoft.ApplicationInsights.DependencyCollector.2.2.0-beta2\lib\net45\Microsoft.AI.DependencyCollector.dll'
     #   '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.2.0-beta2\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', #not (yet) used
         #And the additional powershell modules 
         '.\AIPerformanceCollector.psm1',
