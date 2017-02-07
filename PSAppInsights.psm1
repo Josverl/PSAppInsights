@@ -49,10 +49,17 @@ function New-AIClient
         # Set to indicate messages sent from or during a test 
         [string]$Synthetic = $null,
 
+<<<<<<< HEAD
         #Set of telemetry initializers to starts 
         [Alias("Init")]
         [ValidateSet('Domain','Device','Operation')]
         [String[]] $Initializer = @(), 
+=======
+        #Set of initializers - Default: Operation Correlation is enabled 
+        [Alias("Initializer")]
+        [ValidateSet('Domain','Device','Operation','Dependency')]
+        [String[]] $Init = @(), 
+>>>>>>> a1980fc16b0c9583c9b20baefe2f7385e951db07
         
         #Allow PII in Traces 
         [switch]$AllowPII,
@@ -93,6 +100,18 @@ function New-AIClient
                 $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
             }
+
+            if ($Init.Contains('Dependency')) {
+                $Dependency = [Microsoft.ApplicationInsights.DependencyCollector.DependencyTrackingTelemetryModule]::new();
+                $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
+                $TelemetryModules.Modules.Add($Dependency);
+            }
+
+            $Global:AISingleton.Configuration.TelemetryInitializers | where {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} | ForEach { $_.Initialize($Global:AISingleton.Configuration); }
+		    $Global:AISingleton.Configuration.TelemetryProcessorChain.TelemetryProcessors | where {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} | ForEach { $_.Initialize($Global:AISingleton.Configuration); }
+            $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
+            $TelemetryModules.Modules | where {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} | ForEach { $_.Initialize($Global:AISingleton.Configuration); }
+
             $client = [Microsoft.ApplicationInsights.TelemetryClient]::new($Global:AISingleton.Configuration)
 
             if ($client) { 
