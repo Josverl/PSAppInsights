@@ -41,18 +41,19 @@ function New-AIClient
         [Parameter(Mandatory=$true,
                    ValueFromPipelineByPropertyName=$true,
                    Position=0)]
-        $Key,
+        [Alias("Key")]
+        $InstrumentationKey,
         [string]$SessionID = (New-Guid), 
-        [string]$OperationID = (New-Guid), 
+        [string]$OperationID = (New-Guid), #? Base 64 encoded GUID ?
         #Version of the application or Component
         $Version,
         # Set to indicate messages sent from or during a test 
         [string]$Synthetic = $null,
 
         #Set of initializers - Default: Operation Correlation is enabled 
-        [Alias("Initializer")]
+        [Alias("Init")]
         [ValidateSet('Domain','Device','Operation','Dependency')]
-        [String[]] $Init = @(), 
+        [String[]] $Initializer = @(), 
         
         #Allow PII in Traces 
         [switch]$AllowPII,
@@ -69,7 +70,7 @@ function New-AIClient
             Write-Verbose "create Telemetry client"
 
             # This is a singleton that controls all New AI Client sessions for this process from this moment 
-            [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
+            [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $InstrumentationKey
             [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.DisableTelemetry = $false
 
             #optionally add Fiddler for debugging
@@ -84,7 +85,7 @@ function New-AIClient
                 $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($OpInit)
             }
-            #Add domain initiliser to add domain and machine info 
+            #Add domain initialiser to add domain and machine info 
             if ($Initializer.Contains('Domain')) {
                 $DomInit = [Microsoft.ApplicationInsights.WindowsServer.DomainNameRoleInstanceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DomInit)
@@ -94,12 +95,14 @@ function New-AIClient
                 $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
             }
+
             #Add dependency collector to (automatically ?) measure dependencies 
-            if ($Init.Contains('Dependency')) {
+            if ($Initializer.Contains('Dependency')) {
                 $Dependency = [Microsoft.ApplicationInsights.DependencyCollector.DependencyTrackingTelemetryModule]::new();
                 $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
                 $TelemetryModules.Modules.Add($Dependency);
             }
+
             #Now that they are added, they still need to be initialised
             #Lets do it
             $Global:AISingleton.Configuration.TelemetryInitializers | 
@@ -118,7 +121,7 @@ function New-AIClient
             if ($client) { 
                 Write-Verbose "Add Key, Session.id and Operation.id"
                 
-                $client.InstrumentationKey = $Key
+                $client.InstrumentationKey = $InstrumentationKey
                 $client.Context.Session.Id = $SessionID
                 #Operation : A generated value that correlates different events, so that you can find "Related items"
                 $client.Context.Operation.Id = $OperationID

@@ -27,13 +27,14 @@
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
     NestedModules = @(  
         #Application Insights Dlls that are needed for the exposed functionality 
-        '.\Microsoft.ApplicationInsights.2.2.0-beta2\lib\net45\Microsoft.ApplicationInsights.dll',
-        '.\Microsoft.ApplicationInsights.WindowsServer.2.2.0-beta2\lib\net45\Microsoft.AI.WindowsServer.dll',
-        '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.2.0-beta2\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
-        #to track dependencies
-        '.\Microsoft.ApplicationInsights.Agent.Intercept.2.0.1\lib\net45\Microsoft.AI.Agent.Intercept.dll',
-        '.\Microsoft.ApplicationInsights.DependencyCollector.2.2.0-beta2\lib\net45\Microsoft.AI.DependencyCollector.dll'
-    #   '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.2.0-beta2\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', #not (yet) used
+        '.\Microsoft.ApplicationInsights.2.2.0\lib\net45\Microsoft.ApplicationInsights.dll',
+        '.\Microsoft.ApplicationInsights.WindowsServer.2.2.0\lib\net45\Microsoft.AI.WindowsServer.dll',
+        '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.2.0\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
+
+## Binding redirect may be needed 
+        '.\Microsoft.ApplicationInsights.Agent.Intercept.2.0.7\lib\net45\Microsoft.AI.Agent.Intercept.dll',
+        '.\Microsoft.ApplicationInsights.DependencyCollector.2.2.0\lib\net45\Microsoft.AI.DependencyCollector.dll'
+    #   '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.2.0\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', #not (yet) used
         #And the additional powershell modules 
         '.\AIPerformanceCollector.psm1',
         '.\AIDependency.psm1',
@@ -82,7 +83,7 @@
 
             # ReleaseNotes of this module
         ReleaseNotes = @"
-V0.7.4   Upgrade to ApplicationInSights 2.2.0-beta2 
+V0.7.4   Upgrade to ApplicationInSights 2.2.0 
 V0.7.3   Add support to report Powershell call stack
 V0.7.2   Add Convertto-hashtable
 V0.7     Add Collection of Performance Counters, Update to PSGallery

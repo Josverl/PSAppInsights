@@ -1,11 +1,19 @@
 ﻿ 
-Import-Module .\AIDependency.psm1 -Force -Verbose
-$key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
-$client = New-AIClient -Key $key 
 
 Describe 'AI Dependency Nested Module' {
 
-    $Watch1 = new-Stopwatch
+    BeforeAll {
+        Import-Module .\AIDependency.psm1 -Force -Verbose
+        $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
+        $client = New-AIClient -Key $key 
+
+        $Watch1 = new-Stopwatch
+    }
+    
+    AfterAll {
+        Remove-Module -Name AIDependency
+    }
+
     It 'can start a Stopwatch' {
         $Watch1 | should not be $null
         $Watch1.GetType()  | should be 'System.Diagnostics.Stopwatch'

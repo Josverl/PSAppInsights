@@ -20,7 +20,7 @@ Import-Module ".\PSAppInsights.psd1" -Force
 
 Describe "PSAppInsights Module" {
     It "loads the AI Dll" {
-        New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue | Should not be $null
+        New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue -Verbose| Should not be $null
     }
 
     $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
