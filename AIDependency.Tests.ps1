@@ -1,18 +1,27 @@
-﻿ 
+﻿
+Import-Module .\AIDependency.psm1 -Force -Verbose
+ 
 
 Describe 'AI Dependency Nested Module' {
 
     BeforeAll {
-        Import-Module .\AIDependency.psm1 -Force -Verbose
         $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
-        $client = New-AIClient -Key $key 
-
         $Watch1 = new-Stopwatch
     }
     
     AfterAll {
         Remove-Module -Name AIDependency
     }
+
+    It 'can start a AI Client with dependency tracking' {
+        $client = New-AIClient -Key $key -Initializer Dependency
+
+        {$c2 = New-AIClient -Key $key -Initializer Dependency} | Should not Throw
+        $client | Should not be $null
+
+    }
+
+
 
     It 'can start a Stopwatch' {
         $Watch1 | should not be $null
@@ -47,5 +56,11 @@ Describe 'AI Dependency Nested Module' {
          } | Should not Throw
     }
 
+    It 'Dependency can be set to HTTP'  {
+        {   
+            Send-AIDependency -Name "TEST HTTP" -TimeSpan $TS -Success $True -DependencyKind HTTP -CommandName "http://powershellgallery.com"
+        
+         } | Should not Throw
+    }
 
 }

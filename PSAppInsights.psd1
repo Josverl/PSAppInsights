@@ -27,13 +27,16 @@
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
     NestedModules = @(  
         #Application Insights Dlls that are needed for the exposed functionality 
+        #base AI Service 
         '.\Microsoft.ApplicationInsights.2.2.0\lib\net45\Microsoft.ApplicationInsights.dll',
+        #AI For fat clients 
         '.\Microsoft.ApplicationInsights.WindowsServer.2.2.0\lib\net45\Microsoft.AI.WindowsServer.dll',
+        #AI based on perfcounters 
         '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.2.0\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
-
-## Binding redirect may be needed 
+        # Tracking of dependencies 
         '.\Microsoft.ApplicationInsights.Agent.Intercept.2.0.7\lib\net45\Microsoft.AI.Agent.Intercept.dll',
-        '.\Microsoft.ApplicationInsights.DependencyCollector.2.2.0\lib\net45\Microsoft.AI.DependencyCollector.dll'
+        '.\Microsoft.ApplicationInsights.DependencyCollector.2.2.0\lib\net45\Microsoft.AI.DependencyCollector.dll',
+
     #   '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.2.0\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', #not (yet) used
         #And the additional powershell modules 
         '.\AIPerformanceCollector.psm1',
