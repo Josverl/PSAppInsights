@@ -41,34 +41,27 @@ function New-AIClient
         [Parameter(Mandatory=$true,
                    ValueFromPipelineByPropertyName=$true,
                    Position=0)]
-        $Key,
+        [Alias("Key")]
+        $InstrumentationKey,
         [string]$SessionID = (New-Guid), 
-        [string]$OperationID = (New-Guid), 
+        [string]$OperationID = (New-Guid), #? Base 64 encoded GUID ?
         #Version of the application or Component
         $Version,
         # Set to indicate messages sent from or during a test 
         [string]$Synthetic = $null,
 
-<<<<<<< HEAD
-        #Set of telemetry initializers to starts 
-        [Alias("Init")]
-        [ValidateSet('Domain','Device','Operation')]
-        [String[]] $Initializer = @(), 
-=======
         #Set of initializers - Default: Operation Correlation is enabled 
-        [Alias("Initializer")]
+
+        [Alias("Init")]
         [ValidateSet('Domain','Device','Operation','Dependency')]
-        [String[]] $Init = @(), 
->>>>>>> a1980fc16b0c9583c9b20baefe2f7385e951db07
+        [String[]] $Initializer = @(), 
         
         #Allow PII in Traces 
         [switch]$AllowPII,
 
         #Send AI traces via Fiddler for debugging
         [switch]$Fiddler
-
     )
-
 
     Process
     {
@@ -76,7 +69,7 @@ function New-AIClient
             Write-Verbose "create Telemetry client"
 
             # This is a singleton that controls all New AI Client sessions for this process from this moment 
-            [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
+            [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $InstrumentationKey
             [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.DisableTelemetry = $false
 
             #optionally add Fiddler for debugging
@@ -85,39 +78,49 @@ function New-AIClient
             }
             
             $Global:AISingleton.Configuration = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active
-
+            # Start the initialisers specified
             if ($Initializer.Contains('Operation')) {
                 #Initializer for operation correlation 
                 $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($OpInit)
             }
+            #Add domain initialiser to add domain and machine info 
             if ($Initializer.Contains('Domain')) {
                 $DomInit = [Microsoft.ApplicationInsights.WindowsServer.DomainNameRoleInstanceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DomInit)
             }
-
+            #Add device initiliser to add client info 
             if ($Initializer.Contains('Device')) {
                 $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
             }
 
-            if ($Init.Contains('Dependency')) {
+            #Add dependency collector to (automatically ?) measure dependencies 
+            if ($Initializer.Contains('Dependency')) {
                 $Dependency = [Microsoft.ApplicationInsights.DependencyCollector.DependencyTrackingTelemetryModule]::new();
                 $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
                 $TelemetryModules.Modules.Add($Dependency);
             }
 
-            $Global:AISingleton.Configuration.TelemetryInitializers | where {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} | ForEach { $_.Initialize($Global:AISingleton.Configuration); }
-		    $Global:AISingleton.Configuration.TelemetryProcessorChain.TelemetryProcessors | where {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} | ForEach { $_.Initialize($Global:AISingleton.Configuration); }
+            #Now that they are added, they still need to be initialised
+            #Lets do it
+            $Global:AISingleton.Configuration.TelemetryInitializers | 
+                Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
+                ForEach-Object { $_.Initialize($Global:AISingleton.Configuration); }
+		    $Global:AISingleton.Configuration.TelemetryProcessorChain.TelemetryProcessors |
+                 Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
+                  ForEach-Object { $_.Initialize($Global:AISingleton.Configuration); }
             $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
-            $TelemetryModules.Modules | where {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} | ForEach { $_.Initialize($Global:AISingleton.Configuration); }
-
+            $TelemetryModules.Modules | 
+                Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
+                ForEach-Object { $_.Initialize($Global:AISingleton.Configuration); }
+            #Time to start the client 
             $client = [Microsoft.ApplicationInsights.TelemetryClient]::new($Global:AISingleton.Configuration)
 
             if ($client) { 
                 Write-Verbose "Add Key, Session.id and Operation.id"
                 
-                $client.InstrumentationKey = $Key
+                $client.InstrumentationKey = $InstrumentationKey
                 $client.Context.Session.Id = $SessionID
                 #Operation : A generated value that correlates different events, so that you can find "Related items"
                 $client.Context.Operation.Id = $OperationID
@@ -126,9 +129,13 @@ function New-AIClient
                 # set properties such as TelemetryClient.Context.User.Id to track users and sessions, 
                 # or TelemetryClient.Context.Device.Id to identify the machine. 
                 # This information is attached to all events sent by the instance.
-
+                
                 Write-Verbose "Add device.OS and User Agent"
-                $client.Context.Device.OperatingSystem = (Get-CimInstance Win32_OperatingSystem).version
+                #OS cannot be read in Azure automation, handle gracefully
+                $OS = Get-CimInstance -ClassName 'Win32_OperatingSystem' -ErrorAction SilentlyContinue
+                if ($OS) {
+                    $client.Context.Device.OperatingSystem = $OS.version
+                }
                 $client.Context.User.UserAgent = $Host.Name
 
                 if ($AllowPII) {

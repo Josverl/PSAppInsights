@@ -2,8 +2,6 @@
  # Dependency
 #>
 
-
-
 function new-Stopwatch
 {
     return [System.Diagnostics.Stopwatch]::StartNew();

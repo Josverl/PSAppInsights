@@ -1,26 +1,20 @@
 ﻿<#PSScriptInfo
 .DESCRIPTION 
     Pester tests for PowerShell App Insights Module
-#Version is used in test 
+    The script .Version 0.3 is used in test, 
+    do not modify withouth changing the test can detect the calling script version' 
 .VERSION 0.3
 .AUTHOR Jos Verlinde
 .GUID bcff6b0e-509e-4c9d-af31-dccc41e148d0
 #>
 
-<# 
-$here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.'
-
-#Module 
-$sut = $sut.Replace('.ps1', '.psd1') 
-Write-Verbose "$here\$sut" #>
-
-Get-Module psappInsights -All | Remove-Module -Force
-Import-Module ".\PSAppInsights.psd1" -Force 
+#Assume current directory is set, load up the module 
+Get-Module psappInsights -All | Remove-Module -Force -ErrorAction SilentlyContinue
+Import-Module ".\PSAppInsights.psd1" -Force  
 
 Describe "PSAppInsights Module" {
     It "loads the AI Dll" {
-        New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue | Should not be $null
+        New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue -Verbose| Should not be $null
     }
 
     $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
@@ -76,10 +70,10 @@ Describe "PSAppInsights Module" {
         }
 
 
-        it 'can detect the calling script version ' {
+        it 'can detect the calling script version' {
             $client = New-AIClient -Key $key -AllowPII -Init Device, Domain, Operation
 
-            #Check Version number  (match this script ) 
+            #Check Version number  (match this script's version ) 
             $Client.Context.Component.Version | should be "0.3"  
 
         }
