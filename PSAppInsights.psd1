@@ -7,7 +7,7 @@
 @{
     # Script module associated with this manifest.
     RootModule = 'PSAppInsights'
-    ModuleVersion = '0.7.4'
+    ModuleVersion = '0.8'
 
     # ID used to uniquely identify this module
     GUID = '1706beeb-bb2f-4a51-b1fd-f972e62f4d2d'
@@ -86,6 +86,7 @@
 
             # ReleaseNotes of this module
         ReleaseNotes = @"
+V0.8     Integrate multiple different Features.
 V0.7.4   Upgrade to ApplicationInSights 2.2.0 
 V0.7.3   Add support to report Powershell call stack
 V0.7.2   Add Convertto-hashtable

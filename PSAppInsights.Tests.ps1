@@ -9,8 +9,8 @@
 #>
 
 #Assume current directory is set, load up the module 
-Get-Module psappInsights -All | Remove-Module -Force -ErrorAction SilentlyContinue
-Import-Module ".\PSAppInsights.psd1" -Force  
+Get-Module -Name 'PSAppInsights' -All | Remove-Module -Force -ErrorAction SilentlyContinue
+Import-Module ".\PSAppInsights.psd1" -Force 
 
 Describe "PSAppInsights Module" {
     It "loads the AI Dll" {
@@ -21,8 +21,6 @@ Describe "PSAppInsights Module" {
 
     $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
     $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 
-
-       
 
     It 'can log live metrics' {
         { Start-AILiveMetrics -Key $key } | Should not Throw
@@ -241,15 +239,15 @@ Describe "PSAppInsights Module" {
         #-----------------------------------------
 
 
-        It 'can log server request - One Off ' {
+        It 'can log server request - One Off ' -Skip {
         
         }
 
-        It 'can Start a Server Request' {
+        It 'can Start a Server Request' -Skip {
         
         }
 
-        It 'can Finalize a Server Request' {
+        It 'can Finalize a Server Request' -Skip {
         
         }
 

@@ -1,5 +1,5 @@
 ﻿
-Get-Module psappInsights -All | Remove-Module -Force
+Get-Module -Name 'PSAppInsights' -All | Remove-Module -Force -ErrorAction SilentlyContinue
 Import-Module ".\PSAppInsights.psd1" -Force  
 
 Describe 'AI Dependency Nested Module' {
@@ -10,7 +10,7 @@ Describe 'AI Dependency Nested Module' {
     }
     
     AfterAll {
-        Remove-Module -Name AIDependency
+        Remove-Module -Name AIDependency -Force -ErrorAction SilentlyContinue
     }
 
     It 'can start a AI Client with dependency tracking' {
