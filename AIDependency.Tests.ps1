@@ -1,8 +1,7 @@
 ﻿Param ( 
-    
+    #switch to test the installed module after initial test deployment  
     [switch]$TestInstalledModule
 )
-
 
 Get-Module -Name 'PSAppInsights' -All | Remove-Module -Force -ErrorAction SilentlyContinue
 if ($TestInstalledModule) { 
@@ -18,7 +17,7 @@ if ($TestInstalledModule) {
 Describe 'AI Dependency Nested Module' {
 
     BeforeAll {
-        $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
+        $key = "b437832d-a6b3-4bb4-b237-51308509747d"
         $Watch1 = new-Stopwatch
     }
     

@@ -27,8 +27,8 @@ Describe "PSAppInsights Module" {
     It "loads the AI Dll" {
         New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue -Verbose| Should not be $null
     }
-
-    $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
+    #AI Powershell-test 
+    $key = "b437832d-a6b3-4bb4-b237-51308509747d"
 
     $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
     $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 
