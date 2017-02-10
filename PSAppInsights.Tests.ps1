@@ -7,10 +7,21 @@
 .AUTHOR Jos Verlinde
 .GUID bcff6b0e-509e-4c9d-af31-dccc41e148d0
 #>
+Param ( 
+    #switch to test the installed module after initial test deployment  
+    [switch]$TestInstalledModule
+)
 
-#Assume current directory is set, load up the module 
 Get-Module -Name 'PSAppInsights' -All | Remove-Module -Force -ErrorAction SilentlyContinue
-Import-Module ".\PSAppInsights.psd1" -Force 
+if ($TestInstalledModule) { 
+    Write-Verbose 'Load locally installed module' -Verbose
+    $M = Import-Module -Name PSAppInsights -PassThru
+    $m | FT Name,version, Path
+
+} else { 
+    #Load Module under development 
+    Import-Module ".\PSAppInsights.psd1" -Force  
+}
 
 Describe "PSAppInsights Module" {
     It "loads the AI Dll" {

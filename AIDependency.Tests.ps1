@@ -1,6 +1,19 @@
-﻿
+﻿Param ( 
+    
+    [switch]$TestInstalledModule
+)
+
+
 Get-Module -Name 'PSAppInsights' -All | Remove-Module -Force -ErrorAction SilentlyContinue
-Import-Module ".\PSAppInsights.psd1" -Force  
+if ($TestInstalledModule) { 
+    Write-Verbose 'Load locally installed module' -Verbose
+    $M = Import-Module -Name PSAppInsights -PassThru
+    $m | FT Name,version, Path
+
+} else { 
+    #Load Module under development 
+        Import-Module ".\PSAppInsights.psd1" -Force  
+}
 
 Describe 'AI Dependency Nested Module' {
 
