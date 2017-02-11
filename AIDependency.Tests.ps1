@@ -1,11 +1,24 @@
-﻿
+﻿Param ( 
+    #switch to test the installed module after initial test deployment  
+    [switch]$TestInstalledModule
+)
+
 Get-Module -Name 'PSAppInsights' -All | Remove-Module -Force -ErrorAction SilentlyContinue
-Import-Module ".\PSAppInsights.psd1" -Force  
+if ($TestInstalledModule) { 
+    Write-Verbose 'Load locally installed module' -Verbose
+    $M = Import-Module -Name PSAppInsights -PassThru
+    $m | FT Name,version, Path
+
+} else { 
+    #Load Module under development 
+        Import-Module ".\PSAppInsights.psd1" -Force  
+}
 
 Describe 'AI Dependency Nested Module' {
 
     BeforeAll {
-        $key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
+        #AI Powershell-test 
+        $key = "b437832d-a6b3-4bb4-b237-51308509747d"
         $Watch1 = new-Stopwatch
     }
     
@@ -18,10 +31,7 @@ Describe 'AI Dependency Nested Module' {
 
         {$c2 = New-AIClient -Key $key -Initializer Dependency} | Should not Throw
         $client | Should not be $null
-
     }
-
-
 
     It 'can start a Stopwatch' {
         $Watch1 | should not be $null

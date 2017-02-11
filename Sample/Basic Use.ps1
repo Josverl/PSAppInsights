@@ -4,7 +4,7 @@
 
 #Import the module
 Import-Module .\PSAppInsights.psd1 -Force 
-$key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
+$key = "b437832d-a6b3-4bb4-b237-51308509747d"
 
 
 #init a client and send basic non-PII information for correlation

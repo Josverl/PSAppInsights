@@ -1,6 +1,10 @@
 ﻿<#
  #  use Invoke-Psake to start the build
  - Support Module
+    #v0.9 - clean up release copy by removing unneeded files from NUGET retrieved dependencies
+          - add 2nd test run after intial test install 
+       
+
     #v0.8 - correceld path bug that caused issues with publishing a module
  - Script
  #  v0.7 Test script Install -Scope CurrentUser
@@ -10,7 +14,6 @@
  #  v0.5 Add logic to use current folder if nothing else specified
  #  v0.4 Add logic to deal with Scripts and Modules
 #>
-
 
 Task default -Depends TestInstall
 
@@ -95,12 +98,10 @@ FormatTaskName "|>-------- {0} --------<|"
 
 Task Test  {
  
-    Import-Module Pester
-    #   $Results = Invoke-Pester -PassThru
-
-    #   if  ($Results.FailedCount -gt 0) {
-    #       Throw "Testing Failed"
-    #   }
+    $Results = Invoke-Pester -PassThru
+    if  ($Results.FailedCount -gt 0) {
+          Throw "Testing Failed"
+    }
 }
 
 Task Clean  -requiredVariables PublishRootDir `
@@ -233,6 +234,12 @@ Task TestInstall -Depends TestPublish{
         install-Module -Name $mft.Name -RequiredVersion $mft.version -Repository $TestRepository -Force -Scope CurrentUser
         Get-InstalledModule -Name $mft.Name
 
+        #now run a 2nd testrun 
+        $Results = Invoke-Pester -PassThru
+        if  ($Results.FailedCount -gt 0) {
+              Throw "Testing Installed Module Failed"
+        }
+
     } else {
         $MFT = Test-ScriptFileInfo -Path (Join-Path $ReleaseDir -ChildPath $target.Name ) 
 
@@ -241,9 +248,7 @@ Task TestInstall -Depends TestPublish{
         Get-InstalledScript -Name $mft.Name -RequiredVersion $mft.version | FT Name, Version, Repo*, InstalledLocation
 
         uninstall-script -Name $mft.Name -RequiredVersion $mft.version -Force 
-
     }
-
 }
 
 Task Publish -Depends TestInstall {
