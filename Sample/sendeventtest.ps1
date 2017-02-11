@@ -27,7 +27,7 @@ MyFunction -Detail Low, Average
 
 
 Import-Module PSAppInsights 
-#$key = "c90dd0dd-3bee-4525-a172-ddb55873d30a"
+#$key = "b437832d-a6b3-4bb4-b237-51308509747d"
 $key = "a7162c29-8478-4bf4-a831-da8819b80496" #ConnectO365
 $key = "b437832d-a6b3-4bb4-b237-51308509747d" #PowerShell
 

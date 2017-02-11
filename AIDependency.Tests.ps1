@@ -1,4 +1,5 @@
 ﻿Param ( 
+
     #switch to test the installed module after initial test deployment  
     [switch]$TestInstalledModule
 )
@@ -7,7 +8,7 @@ Get-Module -Name 'PSAppInsights' -All | Remove-Module -Force -ErrorAction Silent
 if ($TestInstalledModule) { 
     Write-Verbose 'Load locally installed module' -Verbose
     $M = Import-Module -Name PSAppInsights -PassThru
-    $m | FT Name,version, Path
+    $m | Format-Table Name,version, Path
 
 } else { 
     #Load Module under development 
@@ -17,6 +18,9 @@ if ($TestInstalledModule) {
 Describe 'AI Dependency Nested Module' {
 
     BeforeAll {
+
+        #AI Powershell-test 
+
         $key = "b437832d-a6b3-4bb4-b237-51308509747d"
         $Watch1 = new-Stopwatch
     }
@@ -30,10 +34,7 @@ Describe 'AI Dependency Nested Module' {
 
         {$c2 = New-AIClient -Key $key -Initializer Dependency} | Should not Throw
         $client | Should not be $null
-
     }
-
-
 
     It 'can start a Stopwatch' {
         $Watch1 | should not be $null
@@ -45,15 +46,15 @@ Describe 'AI Dependency Nested Module' {
     } 
     
     It 'Dependency can use a Duration - 1' {
-         $TS = Measure-Command { Sleep (Get-Random 1 ) }
+         $TS = Measure-Command { Start-Sleep (Get-Random 1 ) }
         { Send-AIDependency -TimeSpan $TS -Name "TEST Dept." } | Should not Throw
     }
     It 'Dependency can use a Duration from the pipeline - 2'  {
 
-        {  Measure-Command { Sleep (Get-Random 1 ) } | Send-AIDependency -Name "TEST Dept." } | Should not Throw
+        {  Measure-Command { Start-Sleep (Get-Random 1 ) } | Send-AIDependency -Name "TEST Dept." } | Should not Throw
     
     }
-    $TS = Measure-Command { Sleep (Get-Random 1 ) }
+    $TS = Measure-Command { Start-Sleep (Get-Random 1 ) }
     It 'Dependency can Send Failure'  {
         {   
             Send-AIDependency -Name "TEST Dept." -TimeSpan $TS -Success $false -ResultCode 500 
