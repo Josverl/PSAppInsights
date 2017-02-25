@@ -15,8 +15,8 @@
     # Author of this module
     Author = 'Jos Verlinde [MSFT]'
     CompanyName = 'Microsoft'
-    Copyright = '(c) 2016 Jos Verlinde. All rights reserved.'
-    Description = 'Simplay add Application Insights to PowerShell to get basic and advanced tracing to gain insight to how your scripts are actually working, including errors and functional usage'
+    Copyright = '(c) 2016-2017 Jos Verlinde. All rights reserved.'
+    Description = 'Simply add Application Insights to PowerShell to get basic and advanced tracing to gain insight to how your scripts are actually working, including errors and functional usage'
 
     # AppInsights Module is dependent on .Net 4.5
     DotNetFrameworkVersion = '4.5'
@@ -74,15 +74,15 @@
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            Tags = @('Tracing','ApplicationInsights')
+            Tags = @('Tracing','ApplicationInsights','Monitoring','DevOps')
 
             # A URL to the license for this module.
             LicenseUri = 'https://github.com/Josverl/Connect-O365/raw/master/License'
 
             # A URL to the main website for this project.
-            # ProjectUri = ''
+            ProjectUri = 'https://github.com/Josverl/PSAppInsights'
             # A URL to an icon representing this module.
-            IconUri = 'https://raw.githubusercontent.com/Josverl/Connect-O365/master/Connect-O365'
+            IconUri = 'https://raw.githubusercontent.com/Josverl/PSAppInsights/master/Images/PSAI.png'
 
             # ReleaseNotes of this module
         ReleaseNotes = @"
