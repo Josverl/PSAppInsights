@@ -7,7 +7,7 @@
 @{
     # Script module associated with this manifest.
     RootModule = 'PSAppInsights'
-    ModuleVersion = '0.8'
+    ModuleVersion = '0.8.2'
 
     # ID used to uniquely identify this module
     GUID = '1706beeb-bb2f-4a51-b1fd-f972e62f4d2d'
@@ -16,7 +16,7 @@
     Author = 'Jos Verlinde [MSFT]'
     CompanyName = 'Microsoft'
     Copyright = '(c) 2016-2017 Jos Verlinde. All rights reserved.'
-    Description = 'Simply add Application Insights to PowerShell to get basic and advanced tracing to gain insight to how your scripts are actually working, including errors and functional usage'
+    Description = 'Add Application Insights to PowerShell to get both simple and advanced tracing to gain insight to how your scripts are actually working, including errors and functional usage'
 
     # AppInsights Module is dependent on .Net 4.5
     DotNetFrameworkVersion = '4.5'
@@ -36,8 +36,8 @@
         # Tracking of dependencies 
         '.\Microsoft.ApplicationInsights.Agent.Intercept.2.0.7\lib\net45\Microsoft.AI.Agent.Intercept.dll',
         '.\Microsoft.ApplicationInsights.DependencyCollector.2.2.0\lib\net45\Microsoft.AI.DependencyCollector.dll',
-
-    #   '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.2.0\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', #not (yet) used
+        #not (yet) used
+        '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.2.0\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', 
         #And the additional powershell modules 
         '.\AIPerformanceCollector.psm1',
         '.\AIDependency.psm1',
@@ -46,7 +46,6 @@
         '.\AITrace.psm1',
         '.\AIEvent.psm1',
     #   '.\AIOperation.psm1',
-    #   '.\AIPageView.psm1',             #Not relevant to PowerShell Client
         '.\HelperFunctions.psm1'
     )
 
@@ -86,6 +85,7 @@
 
             # ReleaseNotes of this module
         ReleaseNotes = @"
+V0.8.1   Default operation is name of calling Powershell script
 V0.8     Integrate multiple different Features.
 V0.7.4   Upgrade to ApplicationInSights 2.2.0 
 V0.7.3   Add support to report Powershell call stack

@@ -1,6 +1,6 @@
 ﻿<#
     PowerShell App Insights Module
-    V0.7.1
+    V0.8.2
     Application Insight Tracing to Powershell Scripts and Modules
 
 Documentation : 
@@ -8,19 +8,22 @@ Documentation :
     Ref JS   : https://github.com/Microsoft/ApplicationInsights-JS/blob/master/API-reference.md
 #>
 
-$Global:AISingleton = @{
-    ErrNoClient = "Client - No Application Insights Client specified or initialized."
-    Configuration = $null    
-    #The current AI Client
-    Client = $null
-    #The Perfmon Collector
-    PerformanceCollector = $null
-    #QuickPulse aka Live Metrics Stream
-    QuickPulse = $null
-    #Stack of current Operations
-    Operations = [System.Collections.Stack]::new()
-}
+if ( $Global:AISingleton -eq $null ) {
 
+#Only initialize on the first load of the module 
+    $Global:AISingleton = @{
+        ErrNoClient = "Client - No Application Insights Client specified or initialized."
+        Configuration = $null    
+        #The current AI Client
+        Client = $null
+        #The Perfmon Collector
+        PerformanceCollector = $null
+        #QuickPulse aka Live Metrics Stream
+        QuickPulse = $null
+        #Stack of current Operations
+        Operations = [System.Collections.Stack]::new()
+    }
+} 
 <#
 .Synopsis
    Start a new AI Client 
@@ -43,8 +46,10 @@ function New-AIClient
                    Position=0)]
         [Alias("Key")]
         $InstrumentationKey,
-        [string]$SessionID = (New-Guid), 
-        [string]$OperationID = (New-Guid), #? Base 64 encoded GUID ?
+#        [string]$SessionID = (New-Guid), 
+        [string]$SessionID = ( New-Guid), 
+        #Operation, by default the Scriptname will be used
+        [string]$OperationID = ((getCallerInfo).ScriptName ), # Use the scriptname if it can be found
         #Version of the application or Component
         $Version,
         # Set to indicate messages sent from or during a test 
@@ -80,40 +85,60 @@ function New-AIClient
             $Global:AISingleton.Configuration = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active
             # Start the initialisers specified
             if ($Initializer.Contains('Operation')) {
-                #Initializer for operation correlation 
+                Write-Verbose "Add initializer- operation correlation" -Verbose
                 $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($OpInit)
             }
             #Add domain initialiser to add domain and machine info 
             if ($Initializer.Contains('Domain')) {
+                Write-Verbose "Add initializer- domain and machine info" -Verbose
                 $DomInit = [Microsoft.ApplicationInsights.WindowsServer.DomainNameRoleInstanceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DomInit)
             }
             #Add device initiliser to add client info 
             if ($Initializer.Contains('Device')) {
+                Write-Verbose "Add initializer- device info" -Verbose
                 $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
             }
 
             #Add dependency collector to (automatically ?) measure dependencies 
             if ($Initializer.Contains('Dependency')) {
+                Write-Verbose "Add initializer- dependency collector" -Verbose
                 $Dependency = [Microsoft.ApplicationInsights.DependencyCollector.DependencyTrackingTelemetryModule]::new();
                 $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
                 $TelemetryModules.Modules.Add($Dependency);
             }
 
             #Now that they are added, they still need to be initialised
-            #Lets do it
-            $Global:AISingleton.Configuration.TelemetryInitializers | 
-                Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
-                ForEach-Object { $_.Initialize($Global:AISingleton.Configuration); }
-		    $Global:AISingleton.Configuration.TelemetryProcessorChain.TelemetryProcessors |
-                 Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
-                  ForEach-Object { $_.Initialize($Global:AISingleton.Configuration); }
+            # Telemetry modules first
+            if ($Global:AISingleton.Configuration.TelemetryInitializers) {
+                Write-Verbose "Initialize- Telemetry modules"
+                $Global:AISingleton.Configuration.TelemetryInitializers | 
+                    Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
+                    ForEach-Object { 
+                        $_.Initialize($Global:AISingleton.Configuration); 
+                        Write-Verbose ".."
+                    }
+            }
+            #Then the telemetry processors 
+            if ($Global:AISingleton.Configuration.TelemetryProcessorChain.TelemetryProcessors ) { 
+                Write-Verbose "Initialize- Telemetry Processors"
+		        $Global:AISingleton.Configuration.TelemetryProcessorChain.TelemetryProcessors |
+                    Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
+                    ForEach-Object { 
+                        $_.Initialize($Global:AISingleton.Configuration); 
+                        Write-Verbose ".."
+                    }
+            } 
+            #Now get the initialised modules 
             $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
+            
+            # todo: check if the 2nd initialisation is really needed 
             $TelemetryModules.Modules | 
                 Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
                 ForEach-Object { $_.Initialize($Global:AISingleton.Configuration); }
+            
             #Time to start the client 
             $client = [Microsoft.ApplicationInsights.TelemetryClient]::new($Global:AISingleton.Configuration)
 
@@ -130,11 +155,23 @@ function New-AIClient
                 # or TelemetryClient.Context.Device.Id to identify the machine. 
                 # This information is attached to all events sent by the instance.
                 
-                Write-Verbose "Add device.OS and User Agent"
-                #OS cannot be read in Azure automation, handle gracefully
-                $OS = Get-CimInstance -ClassName 'Win32_OperatingSystem' -ErrorAction SilentlyContinue
-                if ($OS) {
-                    $client.Context.Device.OperatingSystem = $OS.version
+                if($PSPrivateMetadata.JobId) {
+                    # in Azure Automation
+                    Write-Verbose "Add Azure Automation and JobID"
+                    $client.Context.Cloud.RoleName = 'Azure Automation'
+                    $client.Context.Cloud.RoleInstance = $PSPrivateMetadata.JobId
+
+                    $client.Context.Device.OperatingSystem = 'Azure Automation'
+                }
+                else {
+                   # not in Azure Automation
+                    Write-Verbose "Add device.OS and User Agent"
+                    #OS cannot be read in Azure automation, handle gracefully
+
+                    $OS = Get-CimInstance -ClassName 'Win32_OperatingSystem' -ErrorAction SilentlyContinue
+                    if ($OS) {
+                        $client.Context.Device.OperatingSystem = $OS.version
+                    }
                 }
                 $client.Context.User.UserAgent = $Host.Name
 
@@ -158,12 +195,12 @@ function New-AIClient
                 #Save client in Global for re-use when not specified 
                 $Global:AISingleton.Client = $client
 
-                if ($Version ) {
-                    write-verbose "use specified version"
-                    $client.Context.Component.Version = [string]($version)
-                } else {
+                if ([string]::IsNullOrEmpty($Version) ) {
                     write-verbose "retrieve version of calling script or module."
                     $client.Context.Component.Version = [string](getCallerVersion -level 2)
+                } else {
+                    write-verbose "use specified version"
+                    $client.Context.Component.Version = [string]($version)
                 }
 
                 #Indicate actual / Synthethic events
@@ -171,10 +208,10 @@ function New-AIClient
 
                 return $client 
             } else { 
-                Throw "Could not create ApplicationInsights Client"
+                Throw "Could not create ApplicationInsights Client.."
             }
         } catch {
-            Throw "Could not create ApplicationInsights Client"
+            Throw "Could not create ApplicationInsights Client."
         }
     }
 }

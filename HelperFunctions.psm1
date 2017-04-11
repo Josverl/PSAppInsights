@@ -58,15 +58,19 @@ function Get-StringHash {
 <#
     Helper function to get the script and the line number of the calling function
 #>
-function getCallerInfo ($level = 2)
+function getCallerInfo 
 {
 [CmdletBinding()]
+param(
+    #number of levels to go back in the call stack 
+    [int]$level = 2
+)
     $dict = New-Object 'system.collections.generic.dictionary[[string],[string]]'
     try { 
         #Get the caller info
         $caller = (Get-PSCallStack)[$level] 
         #get only the script name
-        $ScriptName = '<unknown>'
+        $ScriptName = '<unknown script>'
         if ($caller.Location) {
             $ScriptName = ($caller.Location).Split(':')[0]
         }
@@ -81,32 +85,6 @@ function getCallerInfo ($level = 2)
     } catch { return $null}
 }
 
-<#
-    Helper function to get the calling script or module version#>
-function getCallerVersion 
-{
-[CmdletBinding()]
-param(
-    [int]$level = 2
-)
-    try { 
-        #Get the caller info
-        $caller = (Get-PSCallStack)[$level] 
-        #get only the script name
-        $ScriptName = '<unknown>'
-        if ($caller.Location) {
-            $ScriptName = ($caller.Location).Split(':')[0]
-        }
-
-        $dict.Add('ScriptName', $ScriptName)
-        $dict.Add('ScriptLineNumber', $caller.ScriptLineNumber)
-        $dict.Add('Command', $caller.Command)
-        $dict.Add('FunctionName', $caller.FunctionName)
-
-        return $dict
-
-    } catch { return $null}
-}
 
 <#
     Helper function to get the calling script or module version
@@ -171,7 +149,7 @@ param(
  # Credits: Joel Bennet
  # http://poshcode.org/4968
 
- Chnaged to not allow Nulls by default 
+ Changed to not allow Nulls by default 
 #>
 
 
