@@ -26,10 +26,11 @@ Start-AILiveMetrics -Key $key
         #Eat some memory
         for ($i = 0; $i -lt 5000; $i++) { $mem_stress += ("a" * 200MB) }
         Write-Host "Sleep..." -NoNewline
-        Sleep -Seconds 2
+        Start-Sleep -Seconds 2
     }
     Remove-Variable mem_stress
-    Write-Host "." 
+    Write-Host "Rave, Repeat." 
 }        
 
 Stop-AILiveMetrics
+Write-Host "Done."
