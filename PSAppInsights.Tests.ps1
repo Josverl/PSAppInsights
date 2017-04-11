@@ -3,7 +3,7 @@
     Pester tests for PowerShell App Insights Module
     The script .Version 0.3 is used in test, 
     do not modify withouth changing the test can detect the calling script version' 
-.VERSION 0.3
+.VERSION 1.2.3
 .AUTHOR Jos Verlinde
 .GUID bcff6b0e-509e-4c9d-af31-dccc41e148d0
 #>
@@ -19,26 +19,21 @@ if ($TestInstalledModule) {
     $m | Format-Table Name,version, Path
 
 } else { 
-    #Load Module under development 
-    Import-Module ".\PSAppInsights.psd1" -Force  
+    Write-Verbose '--------- Load Module under development ------------' -Verbose 
+    Import-Module ".\PSAppInsights.psd1" -Force -Verbose
 }
 
 Describe "PSAppInsights Module" {
     It "loads the AI Dll" {
         New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue -Verbose| Should not be $null
     }
+    BeforeAll { 
+        #AI Powershell-test 
+        $key = "b437832d-a6b3-4bb4-b237-51308509747d"
 
-    #AI Powershell-test 
-    $key = "b437832d-a6b3-4bb4-b237-51308509747d"
-
-    $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
-    $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 
-
-    It 'can log live metrics' {
-        { Start-AILiveMetrics -Key $key } | Should not Throw
-        $Global:AISingleton.QuickPulse | Should not be $null
+        $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
+        $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 
     }
-
     Context 'New Session' {
 
         It 'can Init a new log AllowPII session' {
@@ -84,7 +79,7 @@ Describe "PSAppInsights Module" {
             $client = New-AIClient -Key $key -AllowPII -Init Device, Domain, Operation
 
             #Check Version number  (match this script's version ) 
-            $Client.Context.Component.Version | should be "0.3"  
+            $Client.Context.Component.Version | should be "1.2.3"  
 
         }
 
@@ -128,14 +123,25 @@ Describe "PSAppInsights Module" {
 
         }
 
+        It 'can log live metrics'  {
+            { Start-AILiveMetrics -Key $key } | Should not Throw
+            $Global:AISingleton.QuickPulse | Should not be $null
+        }
+
         #-----------------------------------------
 
-        It 'can log a trace ' {
-            {Send-AITrace -Client $client -Message "Test Trace Message" } | Should not throw 
+        It 'can log a trace .1' {
+            Send-AITrace -Message "Test Trace Message" 
             
-            #using Global 
             {Send-AITrace -Message "Test Trace Message" } | Should not throw 
 
+            {Send-AITrace -Client $client -Message "Test Trace Message" } | Should not throw 
+        }            
+        It 'can log a trace .3' {
+            #using Global 
+            {Send-AITrace -Message "Test Trace Message" } | Should not throw 
+        }            
+        It 'can log a trace .3' {
             {Send-AITrace -Message "Test Trace Message" -SeverityLevel 0 } | Should not throw 
 
         }
@@ -290,5 +296,69 @@ Describe "PSAppInsights Module" {
 
 
     }
+}
+
+
+Describe 'AI Dependency Nested Module' {
+
+    BeforeAll {
+
+        #AI Powershell-test 
+
+        $key = "b437832d-a6b3-4bb4-b237-51308509747d"
+        $Watch1 = new-Stopwatch
+    }
+    
+#    AfterAll {
+#        Remove-Module -Name AIDependency -Force -ErrorAction SilentlyContinue
+#    }
+
+    It 'can start a AI Client with dependency tracking' {
+        $client = New-AIClient -Key $key -Initializer Dependency
+
+        {$c2 = New-AIClient -Key $key -Initializer Dependency} | Should not Throw
+        $client | Should not be $null
+    }
+
+    It 'can start a Stopwatch' {
+        $Watch1 | should not be $null
+        $Watch1.GetType()  | should be 'System.Diagnostics.Stopwatch'
+    }
+    It 'Depedency can use a stopwatch' {
+        $Watch1.Stop()
+        { Send-AIDependency -StopWatch $Watch1 -Name "TEST Dept." } | Should not Throw
+    } 
+    
+    It 'Dependency can use a Duration - 1' {
+         $TS = Measure-Command { Start-Sleep (Get-Random 1 ) }
+        { Send-AIDependency -TimeSpan $TS -Name "TEST Dept." } | Should not Throw
+    }
+    It 'Dependency can use a Duration from the pipeline - 2'  {
+
+        {  Measure-Command { Start-Sleep (Get-Random 1 ) } | Send-AIDependency -Name "TEST Dept." } | Should not Throw
+    
+    }
+    $TS = Measure-Command { Start-Sleep (Get-Random 1 ) }
+    It 'Dependency can Send Failure'  {
+        {   
+            Send-AIDependency -Name "TEST Dept." -TimeSpan $TS -Success $false -ResultCode 500 
+        
+         } | Should not Throw
+    }
+
+    It 'Dependency can be set to SQL'  {
+        {   
+            Send-AIDependency -Name "TEST SQL." -TimeSpan $TS -Success $True -DependencyKind SQL -CommandName "DROP *"
+        
+         } | Should not Throw
+    }
+
+    It 'Dependency can be set to HTTP'  {
+        {   
+            Send-AIDependency -Name "TEST HTTP" -TimeSpan $TS -Success $True -DependencyKind HTTP -CommandName "http://powershellgallery.com"
+        
+         } | Should not Throw
+    }
+
 }
 
