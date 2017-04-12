@@ -21,6 +21,7 @@ if ($TestInstalledModule) {
 } else { 
     Write-Verbose '--------- Load Module under development ------------' -Verbose 
     Import-Module ".\PSAppInsights.psd1" -Force 
+
 }
 
 Describe "PSAppInsights Module" {
@@ -342,6 +343,7 @@ Describe 'AI Dependency Nested Module' {
     It 'Dependency can Send Failure'  {
         {   
             Send-AIDependency -Name "TEST Dept." -TimeSpan $TS -Success $false # not in 2.3.0 -ResultCode 500 
+
         
          } | Should not Throw
     }
@@ -371,7 +373,6 @@ Describe 'AI Dependency Nested Module' {
             {Send-AIDependency -Name $url -TimeSpan $Timespan -DependencyKind HTTP  } | Should not Throw
         }
     }
-
 
 }
 
