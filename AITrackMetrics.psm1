@@ -5,13 +5,15 @@
     Use TrackMetric to send metrics that are not attached to particular events. For example, you could monitor a queue length at regular intervals. 
     Metrics are displayed as statistical charts in metric explorer, but unlike events, you can't search for individual occurrences in diagnostic search.
 
-
-number 
+Number 
     A string that identifies the metric. In the portal, you can select metrics for display by name.
-average
+
+Average
     Either a single measurement, or the average of several measurements. Should be >=0 to be correctly displayed.
-sampleCount
+
+SampleCount
     Count of measurements represented by the average. Defaults to 1. Should be >=1.
+
 min
     The smallest measurement in the sample. Defaults to the average. Should be >= 0.
 max
@@ -50,6 +52,7 @@ function Send-AIMetric
         [switch] $Flush
 
     )
+    Write-Verbose "Send-AIMetric $Metric = $Value"
     #Check for a specified AI client
     if ($Client -eq $null) {
         throw [System.Management.Automation.PSArgumentNullException]::new($script:ErrNoClient)
@@ -59,6 +62,7 @@ function Send-AIMetric
 
     #Send the callstack
     if ($NoStack -eq $false) { 
+        Write-verbose 'Add Caller information'
         $dictProperties = getCallerInfo -level 2
     }
     #Add the Properties to Dictionary
@@ -67,7 +71,7 @@ function Send-AIMetric
             $dictProperties.Add($h.Name, $h.Value)
         }
     }
-
+    Write-Verbose "Send-AIMetric $Metric = $Value"
     $client.trackMetric($Metric, $Value, $dictProperties);
 
    # $client.trackMetric.OverloadDefinitions

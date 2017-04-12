@@ -70,9 +70,11 @@ function Start-AIPerformanceCollector
     if ($Fiddler) {
         Write-Verbose "Send though fiddler for debugging" 
         [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.EndpointAddress = 'http://localhost:8888/v2/track'
-    }    Write-Verbose "Initialize"
+    }
+    Write-Verbose "Initialize"
     [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
-    $Global:AISingleton.PerformanceCollector.Initialize( [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active )}
+    $Global:AISingleton.PerformanceCollector.Initialize( [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active )
+}
 
 <#
 .Synopsis
@@ -164,6 +166,7 @@ Param
 
     #Make sure a Key is set if one is provided
     if ( [string]::IsNullOrEmpty($key) -eq $false) {
+        Write-verbose 'Start-AILiveMetrics - Save IKey'
         # This is a singleton that controls all New AI Client sessions for this process from this moment 
         [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
     }
@@ -175,15 +178,16 @@ Param
 
     #If one is running : Close it 
     if ($Global:AISingleton.QuickPulse) {
+        Write-verbose "Start-AILiveMetrics - Stop and replace existing Live Metrics"
         Stop-AIQuickPulse
     }
-
+    
     #Create a new QuickPulse / LiveMetric Processor
     $Global:AISingleton.QuickPulse = [Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse.QuickPulseTelemetryModule]::new()
 
     #Copy the settings 
     # $Global:AISingleton.QuickPulse.DisableFullTelemetryItems = $DisableFullTelemetryItems
-
+     Write-verbose "Start-AILiveMetrics - Initialize"
     $Global:AISingleton.QuickPulse.Initialize( [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active )
 }
 
@@ -202,6 +206,7 @@ Param
 ()
     #If one is running : Close it 
     if ($Global:AISingleton.QuickPulse) {
+         Write-verbose "Stop-AILiveMetrics - Stoppingand disposing client"
         $Global:AISingleton.QuickPulse.Dispose()
         $Global:AISingleton.QuickPulse = $null
     } else {

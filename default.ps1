@@ -163,8 +163,7 @@ Task Copy   -description "Copy items to the release folder" `
 
 Task Sign   -Depends Copy `
             -RequiredVariables ReleaseDir, Target {
-    "Sign"
-    
+  
     #Just get the first codesigning cert 
     $CodeSigningCerts = @(gci cert:\currentuser\my -codesigning)
 
@@ -226,7 +225,6 @@ Task TestPublish -Depends Sign `
 
 
 Task TestInstall -Depends TestPublish{
-    "Test Install"
     if ($target.Type -ieq "Module" ){
 
         $MFT = Test-ModuleManifest -Path (Join-Path $ReleaseDir -ChildPath "$moduleName.psd1") 
@@ -291,5 +289,23 @@ Task Publish -Depends TestInstall {
         $tag = "{0}_{1}" -f $target.BaseName,$MFT.Version.ToString()
         Write-Verbose "Git Tag $tag" -Verbose
         Git tag $tag
+    }
+}
+
+Task Install  {
+
+    if ($target.Type -ieq "Module" ){
+
+        $MFT = Test-ModuleManifest -Path (Join-Path $ReleaseDir -ChildPath "$moduleName.psd1") 
+        find-Module -Name $mft.Name -RequiredVersion $mft.version -Repository $PublishRepository
+        install-Module -Name $mft.Name -RequiredVersion $mft.version -Repository $PublishRepository -Force -Scope CurrentUser
+        Get-InstalledModule -Name $mft.Name
+
+    } else {
+        $MFT = Test-ScriptFileInfo -Path (Join-Path $ReleaseDir -ChildPath $target.Name ) 
+
+        find-script -Name $mft.Name -RequiredVersion $mft.version -Repository $PublishRepository
+        install-script -Name $mft.Name -RequiredVersion $mft.version -Repository $PublishRepository -Force -Scope CurrentUser
+        Get-InstalledScript -Name $mft.Name -RequiredVersion $mft.version | FT Name, Version, Repo*, InstalledLocation
     }
 }

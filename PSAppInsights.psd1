@@ -7,7 +7,7 @@
 @{
     # Script module associated with this manifest.
     RootModule = 'PSAppInsights'
-    ModuleVersion = '0.8.2'
+    ModuleVersion = '0.9.0.1'
 
     # ID used to uniquely identify this module
     GUID = '1706beeb-bb2f-4a51-b1fd-f972e62f4d2d'
@@ -28,16 +28,16 @@
     NestedModules = @(  
         #Application Insights Dlls that are needed for the exposed functionality 
         #base AI Service 
-        '.\Microsoft.ApplicationInsights.2.2.0\lib\net45\Microsoft.ApplicationInsights.dll',
+        '.\Microsoft.ApplicationInsights.2.3.0\lib\net45\Microsoft.ApplicationInsights.dll',
         #AI For fat clients 
-        '.\Microsoft.ApplicationInsights.WindowsServer.2.2.0\lib\net45\Microsoft.AI.WindowsServer.dll',
+        '.\Microsoft.ApplicationInsights.WindowsServer.2.3.0\lib\net45\Microsoft.AI.WindowsServer.dll',
         #AI based on perfcounters 
-        '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.2.0\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
+        '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.3.0\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
         # Tracking of dependencies 
         '.\Microsoft.ApplicationInsights.Agent.Intercept.2.0.7\lib\net45\Microsoft.AI.Agent.Intercept.dll',
-        '.\Microsoft.ApplicationInsights.DependencyCollector.2.2.0\lib\net45\Microsoft.AI.DependencyCollector.dll',
+        '.\Microsoft.ApplicationInsights.DependencyCollector.2.3.0\lib\net45\Microsoft.AI.DependencyCollector.dll',
         #not (yet) used
-        '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.2.0\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', 
+        '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.3.0\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', 
         #And the additional powershell modules 
         '.\AIPerformanceCollector.psm1',
         '.\AIDependency.psm1',
@@ -85,6 +85,8 @@
 
             # ReleaseNotes of this module
         ReleaseNotes = @"
+V0.9     Upgrade to ApplicationInSights 2.3.0, fix dependency load on Windows 10
+V0.8.1   Code cleanup and cosmetics
 V0.8.1   Default operation is name of calling Powershell script
 V0.8     Integrate multiple different Features.
 V0.7.4   Upgrade to ApplicationInSights 2.2.0 

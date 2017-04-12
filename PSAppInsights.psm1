@@ -1,6 +1,6 @@
 ﻿<#
     PowerShell App Insights Module
-    V0.8.2
+    V0.9
     Application Insight Tracing to Powershell Scripts and Modules
 
 Documentation : 
@@ -85,26 +85,26 @@ function New-AIClient
             $Global:AISingleton.Configuration = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active
             # Start the initialisers specified
             if ($Initializer.Contains('Operation')) {
-                Write-Verbose "Add initializer- operation correlation" -Verbose
+                Write-Verbose "Add initializer- operation correlation" 
                 $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($OpInit)
             }
             #Add domain initialiser to add domain and machine info 
             if ($Initializer.Contains('Domain')) {
-                Write-Verbose "Add initializer- domain and machine info" -Verbose
+                Write-Verbose "Add initializer- domain and machine info" 
                 $DomInit = [Microsoft.ApplicationInsights.WindowsServer.DomainNameRoleInstanceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DomInit)
             }
             #Add device initiliser to add client info 
             if ($Initializer.Contains('Device')) {
-                Write-Verbose "Add initializer- device info" -Verbose
+                Write-Verbose "Add initializer- device info"
                 $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
                 $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
             }
 
             #Add dependency collector to (automatically ?) measure dependencies 
             if ($Initializer.Contains('Dependency')) {
-                Write-Verbose "Add initializer- dependency collector" -Verbose
+                Write-Verbose "Add initializer- dependency collector"
                 $Dependency = [Microsoft.ApplicationInsights.DependencyCollector.DependencyTrackingTelemetryModule]::new();
                 $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
                 $TelemetryModules.Modules.Add($Dependency);

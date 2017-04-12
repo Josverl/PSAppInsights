@@ -41,7 +41,9 @@ function Send-AIDependency
 
         #HTTP result code
         [bool]$Success = $true, 
-        [ValidateRange(0,999)]
+        #Hide this resultcode parameter as it appears to be defunt in 2.3.0
+        [Parameter(DontShow)]
+        #[ValidateRange(0,999)]
         [int]$ResultCode = 200, 
 
         #The timestamp for the event; defaults to current date/time
@@ -81,8 +83,13 @@ function Send-AIDependency
         $TelDependency.CommandName = $CommandName
         $TelDependency.DependencyTypeName = $DependencyTypeName
 
+        #Resultcode is apperantly removed from AI 2.3.0
+        If ($ResultCode -ne 200) {
+            Write-Warning "Resultcode cannot be reported in AI 2.3.0"
+        }
         $TelDependency.Success = $Success
-        $TelDependency.ResultCode = $ResultCode
+
+        #$TelDependency.ResultCode = $ResultCode
     
         if ($TimeSpan ) { 
             $TelDependency.Duration = $TimeSpan
