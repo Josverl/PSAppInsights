@@ -1,6 +1,6 @@
 ﻿<#
     PowerShell App Insights Module
-    V0.9
+    V0.9.1
     Application Insight Tracing to Powershell Scripts and Modules
 
 Documentation : 
@@ -64,8 +64,15 @@ function New-AIClient
         #Allow PII in Traces 
         [switch]$AllowPII,
 
-        #Send AI traces via Fiddler for debugging
-        [switch]$Fiddler
+        #Send through Fiddler for debugging
+        [switch]$Fiddler,
+        
+        #When developer mode is True, sends telemetry to Application Insights immediately during the entire lifetime of the application
+        [switch]$DeveloperMode,
+
+        # Sets the maximum telemetry batching interval in seconds. Once the interval expires, sends the accumulated telemetry items for transmission.
+        [ValidateRange(1, 1440)] #Up to day should be sufficient
+        $SendingInterval = 0 
     )
 
     Process
@@ -81,7 +88,22 @@ function New-AIClient
             if ($fiddler) { 
                 [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.EndpointAddress = 'http://localhost:8888/v2/track'
             }
-            
+
+            #Activate/deactivate developermode 
+            if ($DeveloperMode) {
+                Write-Verbose "Set DeveloperMode" 
+                [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.DeveloperMode = $true
+            } else {
+                Write-Verbose "Set DeveloperMode off" 
+                [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.DeveloperMode = $false
+            }
+
+            If ($SendingInterval -ne 0)
+            {        
+                Write-Verbose "Set Bufferdelay to $SendingInterval seconds." 
+                [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.SendingInterval = New-TimeSpan -Seconds $SendingInterval
+            }
+
             $Global:AISingleton.Configuration = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active
             # Start the initialisers specified
             if ($Initializer.Contains('Operation')) {

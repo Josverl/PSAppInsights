@@ -7,7 +7,7 @@
 @{
     # Script module associated with this manifest.
     RootModule = 'PSAppInsights'
-    ModuleVersion = '0.9.0.1'
+    ModuleVersion = '0.9.0.2'
 
     # ID used to uniquely identify this module
     GUID = '1706beeb-bb2f-4a51-b1fd-f972e62f4d2d'
@@ -85,6 +85,7 @@
 
             # ReleaseNotes of this module
         ReleaseNotes = @"
+V0.9.0.2 Add -Developer Mode and -Sending interval to control how quick to send the information to AI
 V0.9     Upgrade to ApplicationInSights 2.3.0, fix dependency load on Windows 10
 V0.8.1   Code cleanup and cosmetics
 V0.8.1   Default operation is name of calling Powershell script

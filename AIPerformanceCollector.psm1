@@ -46,7 +46,14 @@ function Start-AIPerformanceCollector
         $ProcessCounters = @( 'Handle Count', 'Working Set' ),
         
         #Send through Fiddler for debugging
-        [switch]$Fiddler
+        [switch]$Fiddler,
+        
+        #When developer mode is True, sends telemetry to Application Insights immediately during the entire lifetime of the application
+        [switch]$DeveloperMode,
+
+        # Sets the maximum telemetry batching interval in seconds. Once the interval expires, sends the accumulated telemetry items for transmission.
+        [ValidateRange(0, 1440)] #Up to day should be sufficient
+        $SendingInterval = 0
     )
     #Stop Collector if it was already running 
     if ($Global:AISingleton.PerformanceCollector) { 
@@ -71,6 +78,22 @@ function Start-AIPerformanceCollector
         Write-Verbose "Send though fiddler for debugging" 
         [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.EndpointAddress = 'http://localhost:8888/v2/track'
     }
+
+    #Activate/deactivate developermode 
+    if ($DeveloperMode) {
+        Write-Verbose "Set DeveloperMode" 
+        [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.DeveloperMode = $true
+    } else {
+        Write-Verbose "Set DeveloperMode off" 
+        [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.DeveloperMode = $false
+    }
+
+    If ($SendingInterval -ne 0)
+    {        
+        Write-Verbose "Set Bufferdelay to $SendingInterval seconds." 
+        [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.SendingInterval = New-TimeSpan -Seconds $SendingInterval
+    }
+
     Write-Verbose "Initialize"
     [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
     $Global:AISingleton.PerformanceCollector.Initialize( [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active )

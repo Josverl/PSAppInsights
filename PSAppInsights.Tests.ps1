@@ -84,6 +84,22 @@ Describe "PSAppInsights Module" {
 
         }
 
+        it 'can log permon counters in developer mode' {
+            $Global:AISingleton.PerformanceCollector = $null
+            { start-AIPerformanceCollector -key $key -DeveloperMode }| Should not throw
+            $Global:AISingleton.PerformanceCollector | Should not be $null
+        }
+
+        it 'can log permon counters in with a specified interval' {
+            $Global:AISingleton.PerformanceCollector = $null
+
+            { start-AIPerformanceCollector -key $key -SendingInterval 360 }| Should not throw
+            $Global:AISingleton.PerformanceCollector | Should not be $null
+            $TimeSpan = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.SendingInterval
+            $TimeSpan.TotalSeconds | Should be 360
+        }
+
+
         it 'can log permon counters' {
             $Global:AISingleton.PerformanceCollector = $null
             { start-AIPerformanceCollector -key $key }| Should not throw
@@ -94,10 +110,52 @@ Describe "PSAppInsights Module" {
             $Global:AISingleton.PerformanceCollector | Should not be $null
 
         }
-        #Mark Pester traffic As Synthethic traffic
+
+        It 'can run in developer mode ' {
+            #Mark Pester traffic As Synthethic traffic (Keep on ) 
+            $Client = $Null
+            { $client = New-AIClient -Key $key -DeveloperMode} | Should not Throw
+            $client = New-AIClient -Key $key -DeveloperMode
+            $Client | Should not be $Null
+        }
+
+
+
+        It 'Can set the SendingInterval' {
+            #Mark Pester traffic As Synthethic traffic (Keep on ) 
+            $Client = $Null
+            #Check out of bound parameters 
+            { $client = New-AIClient -Key $key -SendingInterval 0} | Should Throw
+            { $client = New-AIClient -Key $key -SendingInterval -1} | Should Throw
+            { $client = New-AIClient -Key $key -SendingInterval 1441} | Should Throw
+            
+            #Check some valid ranges 
+            
+            ( 1440, 10 , 360 , 60 ) | ForEach-Object {  
+                $Seconds = $_
+                { $client = New-AIClient -Key $key -SendingInterval $Seconds} | Should not Throw
+                $Client = $Null
+                $client = New-AIClient -Key $key -SendingInterval $Seconds
+                $Client | Should not be $Null
+                $TimeSpan = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.SendingInterval
+                $TimeSpan.TotalSeconds | Should be $Seconds
+            } 
+
+        }
+
+
+
+
+        It 'Mark Pester traffic As Synthethic traffic (Keep on ) ' {
+            #Mark Pester traffic As Synthethic traffic (Keep on ) 
+            $SynthMarker= "Pester run $((get-date).ToString('g'))"
+            $client = New-AIClient -Key $key -Synthetic $SynthMarker
+        }
+
+        #TestHack to avoid loosing the vlau of client due to scope 
+        #Todo: improve logic
         $SynthMarker= "Pester run $((get-date).ToString('g'))"
         $client = New-AIClient -Key $key -Synthetic $SynthMarker
-
 
         It 'can Init a new log session' {
 
