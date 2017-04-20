@@ -71,7 +71,6 @@ function Send-AIMetric
             $dictProperties.Add($h.Name, $h.Value)
         }
     }
-    Write-Verbose "Send-AIMetric $Metric = $Value"
     $client.trackMetric($Metric, $Value, $dictProperties);
 
    # $client.trackMetric.OverloadDefinitions
