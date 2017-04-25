@@ -106,8 +106,15 @@ function New-AIClient
             $Global:AISingleton.Configuration = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active
             #----------------------
             # Initialisers 
-            #   > A context initializer will only be called once per TelemetryClient instance
-            #   > A Telemetry Initialiser will be called for each Telemetry 'Message'
+            #   - A context initializer will only be called once per TelemetryClient instance
+            #   - A Telemetry Initialiser will be called for each Telemetry 'Message'
+            # ---------------------
+            # ITelemetryProcessor and ITelemetryInitializer
+            # What's the difference between telemetry processors and telemetry initializers?
+            # There are some overlaps in what you can do with them: both can be used to add properties to telemetry.
+            #  - TelemetryInitializers always run before TelemetryProcessors.
+            #  - TelemetryProcessors allow you to completely replace or discard a telemetry item.
+            #  - TelemetryProcessors don't process performance counter telemetry
             #----------------------
             #Context Initialisers 
             #----------------------
@@ -134,6 +141,10 @@ function New-AIClient
             #Telemetry Initialisers 
             #----------------------
             # Add  the initialisers specified
+            # If you provide a telemetry initializer, it is called whenever any of the Track*() (ai native) methods is called.
+            # This includes methods called by the standard telemetry modules. By convention, these modules 
+            # do not set any property that has already been set by an initializer
+
             if ($Initializer.Contains('Operation')) {
                 Write-Verbose "Add initializer- operation correlation" 
                 $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
@@ -149,6 +160,14 @@ function New-AIClient
                 $TelemetryModules.Modules.Add($Dependency);
             }
 
+            # Send any unhandled exceptions
+            # The module subscribed to AppDomain.CurrentDomain.UnhandledException to send exceptions to ApplicationInsights.
+
+<#            
+            $Unhandled =  [Microsoft.ApplicationInsights.WindowsServer.UnhandledExceptionTelemetryModule]::New()
+                $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
+                $TelemetryModules.Modules.Add($Unhandled);
+#>
             #Now that they are added, they still need to be initialised
             # Telemetry modules first
             if ($Global:AISingleton.Configuration.TelemetryInitializers) {

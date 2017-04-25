@@ -28,10 +28,13 @@ function Send-AIException
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
         [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
-        
+
+<#        
         #include call stack  information (Default)
         [switch] $NoStack,
-
+        #The number of Stacklevels to go up 
+        [int]$StackWalk = 0,
+#>
         #Directly flush the AI events to the service
         [switch] $Flush
 
@@ -48,7 +51,7 @@ function Send-AIException
 <#
     #Send the callstack
     if ($NoStack -eq $false) { 
-        $dictProperties = getCallerInfo -level 2
+        $dictProperties = getCallerInfo -level (2+$StackWalk)
         #? Add the caller info
         $AIExeption.Properties.Add($dictProperties)
     }
@@ -67,9 +70,9 @@ function Send-AIException
     }
     $AIExeption.Exception = $Exception
 
-    $client.TrackEvent($AIExeption)
+    #$client.TrackEvent($AIExeption)
 
-    #$client.TrackException($Exception) 
+    $client.TrackException($Exception) 
     #$client.TrackException($Exception, $HandledAt, $Properties, $Metrics, $Severity) 
 
 

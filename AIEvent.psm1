@@ -26,6 +26,8 @@ function Send-AIEvent
         [Hashtable]$Metrics,
         #include call stack  information (Default)
         [switch] $NoStack,
+        #The number of Stacklevels to go up 
+        [int]$StackWalk = 0,
         #Directly flush the AI events to the service
         [switch] $Flush
 
@@ -41,7 +43,7 @@ function Send-AIEvent
 
     #Send the callstack
     if ($NoStack -eq $false) { 
-        $dictProperties = getCallerInfo -level 2
+        $dictProperties = getCallerInfo -level (2+$StackWalk)
     }
     #Add the Properties to Dictionary
     if ($Properties) { 

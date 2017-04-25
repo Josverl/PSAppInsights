@@ -243,6 +243,13 @@ Describe "PSAppInsights Module" {
         
         }
 
+        It 'can log an event - Stackwalk ' {
+            {Send-AIEvent -Client $client -Event "Test event - Simple, no stack" -StackWalk 1 } | Should not throw 
+        }
+
+        It 'can log an event - Negative Stackwalk' -Skip {
+                {Send-AIEvent -Client $client -Event "Test event - Simple, no stack" -StackWalk -1 } | Should  throw 
+        }
 
         It 'can log an event - with metrics'  {
             # BUGBUG on the sending end 
