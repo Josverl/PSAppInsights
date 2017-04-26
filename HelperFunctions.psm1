@@ -64,7 +64,9 @@ function getCallerInfo
 param(
     #number of levels to go back in the call stack 
     [ValidateRange(1,  99)]
-    [int]$level = 2
+    [int]$level = 2,
+    [Switch]$FullStack 
+
 )
     $dict = New-Object 'system.collections.generic.dictionary[[string],[string]]'
     try { 
@@ -86,6 +88,12 @@ param(
             #Split  on : and take the first node only
             
             $dict.Add('Script',   $Scriptname.Split(':')[0])
+        }
+         #  Also Add the complete Stack 
+        If ($FullStack) {
+            #$ReportLevels = 1 + $Stack.Count - $level
+            $StackTrace = $Stack | Select -Skip $level -Property ScriptName,ScriptLineNumber,FunctionName,Command,Location,Arguments | ConvertTo-Json -Compress
+            $dict.Add( 'PSCallStack', $StackTrace)
         }
   
         return $dict

@@ -22,8 +22,11 @@ function Send-AITrace
         [Hashtable]$Properties,
 
 
-        #include call stack  information (Default)
+        #Disable include call stack information of the caller
         [switch] $NoStack,
+        #include All call stack information 
+        [switch] $FullStack,
+        
         #The number of Stacklevels to go up 
         [int]$StackWalk = 0,
 
@@ -43,7 +46,7 @@ function Send-AITrace
 
     #Send the callstack
     if ($NoStack -ne $True) { 
-        $dictProperties = getCallerInfo -level (2+$StackWalk)
+        $dictProperties = getCallerInfo -level (2+$StackWalk) -FullStack:$FullStack
     }
     #Add the Properties to Dictionary
     if ($Properties) { 
@@ -55,7 +58,6 @@ function Send-AITrace
 
     $client.TrackTrace($Message, $Sev, $dictProperties)
     #$client.TrackTrace($Message)
-    
     if ($Flush) { 
         $client.Flush()
     }
