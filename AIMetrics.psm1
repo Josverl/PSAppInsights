@@ -78,7 +78,7 @@ function Send-AIMetric
     $dictProperties = New-Object 'system.collections.generic.dictionary[[string],[string]]'
 
     #Send the callstack
-    if ($NoStack -eq $false) { 
+    if ($NoStack -ne $True) { 
         Write-verbose 'Add Caller information'
         $dictProperties = getCallerInfo -level (2+$StackWalk)
     }

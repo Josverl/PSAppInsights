@@ -53,7 +53,7 @@ function Send-AIEvent
     $dictMetrics = New-Object 'system.collections.generic.dictionary[[string],[double]]'
 
     #Send the callstack
-    if ($NoStack -eq $false) { 
+    if ($NoStack -ne $True) { 
         $dictProperties = getCallerInfo -level (2+$StackWalk)
     }
     #Add the Properties to Dictionary

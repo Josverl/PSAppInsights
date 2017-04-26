@@ -50,7 +50,7 @@ function New-AIClient
         [string]$SessionID = ( New-Guid), 
         #Operation, by default the Scriptname will be used
         [string]$OperationID = ((getCallerInfo).ScriptName ), # Use the scriptname if it can be found
-        #Version of the application or Component
+        #Version of the application or Component, defaults to retrieving theversion from the script
         $Version,
         # Set to indicate messages sent from or during a test 
         [string]$Synthetic = $null,
@@ -255,11 +255,11 @@ function New-AIClient
 
                 if ([string]::IsNullOrEmpty($Version) ) {
                     write-verbose "retrieve version of calling script or module."
-                    $client.Context.Component.Version = [string](getCallerVersion -level 2)
-                } else {
-                    write-verbose "use specified version"
-                    $client.Context.Component.Version = [string]($version)
-                }
+                    $Version = getCallerVersion 
+                } 
+                write-verbose "use version $([string]$version)"
+                $client.Context.Component.Version = [string]($version)
+                
 
                 #Indicate actual / Synthethic events
                 $Global:AISingleton.Client.Context.Operation.SyntheticSource = $Synthetic

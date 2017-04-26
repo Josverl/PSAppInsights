@@ -50,7 +50,7 @@ function Send-AIException
     $AIExeption = New-Object Microsoft.ApplicationInsights.DataContracts.ExceptionTelemetry
 <#
     #Send the callstack
-    if ($NoStack -eq $false) { 
+    if ($NoStack -ne $True) { 
         $dictProperties = getCallerInfo -level (2+$StackWalk)
         #? Add the caller info
         $AIExeption.Properties.Add($dictProperties)
