@@ -24,7 +24,9 @@ function Send-AITrace
 
         #include call stack  information (Default)
         [switch] $NoStack,
-        
+        #The number of Stacklevels to go up 
+        [int]$StackWalk = 0,
+
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
         [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
@@ -41,7 +43,7 @@ function Send-AITrace
 
     #Send the callstack
     if ($NoStack -eq $false) { 
-        $dictProperties = getCallerInfo -level 2
+        $dictProperties = getCallerInfo -level (2+$StackWalk)
     }
     #Add the Properties to Dictionary
     if ($Properties) { 

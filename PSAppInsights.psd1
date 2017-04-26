@@ -7,7 +7,7 @@
 @{
     # Script module associated with this manifest.
     RootModule = 'PSAppInsights'
-    ModuleVersion = '0.9.0.2'
+    ModuleVersion = '0.9.1'
 
     # ID used to uniquely identify this module
     GUID = '1706beeb-bb2f-4a51-b1fd-f972e62f4d2d'
@@ -42,7 +42,7 @@
         '.\AIPerformanceCollector.psm1',
         '.\AIDependency.psm1',
         '.\AIException.psm1',                   
-        '.\AITrackMetrics.psm1',
+        '.\AIMetrics.psm1',
         '.\AITrace.psm1',
         '.\AIEvent.psm1',
     #   '.\AIOperation.psm1',
@@ -85,6 +85,7 @@
 
             # ReleaseNotes of this module
         ReleaseNotes = @"
+v0.9.1   Add -Stackwalk to allow Wrapping of a Log function and still allow correct reporting of the calling function -StackWalk 1 
 V0.9.0.2 Add -Developer Mode and -Sending interval to control how quick to send the information to AI
 V0.9     Upgrade to ApplicationInSights 2.3.0, fix dependency load on Windows 10
 V0.8.1   Code cleanup and cosmetics

@@ -5,7 +5,18 @@
    A custom event is a data point that you can display both in in Metrics Explorer as an aggregated count, 
    and also as individual occurrences in Diagnostic Search 
 .EXAMPLE
-   Example of how to use this cmdlet
+    Send-AIEvent -Event "Starting Import Run"
+
+.EXAMPLE
+
+    Function Log ($Message = ""){
+        Write-verbose $Message 
+        Send-AIEvent -Event $Message -StackWalk 1 #One additional Step up in the PSStack
+    }
+
+.EXAMPLE
+    Send-AIEvent -Event "Starting Import Run"
+
 #>
 function Send-AIEvent
 {
@@ -26,6 +37,8 @@ function Send-AIEvent
         [Hashtable]$Metrics,
         #include call stack  information (Default)
         [switch] $NoStack,
+        #The number of Stacklevels to go up 
+        [int]$StackWalk = 0,
         #Directly flush the AI events to the service
         [switch] $Flush
 
@@ -41,7 +54,7 @@ function Send-AIEvent
 
     #Send the callstack
     if ($NoStack -eq $false) { 
-        $dictProperties = getCallerInfo -level 2
+        $dictProperties = getCallerInfo -level (2+$StackWalk)
     }
     #Add the Properties to Dictionary
     if ($Properties) { 

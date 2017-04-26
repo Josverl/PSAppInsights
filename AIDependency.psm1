@@ -16,6 +16,11 @@ function New-Stopwatch
 .EXAMPLE
    Example of how to use this cmdlet
 .EXAMPLE
+   # Measure and report the time taken by a command 
+    Measure-Command { 
+           Connect-AADGraph -tenant $tenantname -graphVer "1.6" -Credentials $AADCredential
+    } | Send-AIDependency -Name "AADGraph" -CommandName "Connect" -DependencyTypeName "AAD" -DependencyKind Other
+   
    Another example of how to use this cmdlet
 #>
 

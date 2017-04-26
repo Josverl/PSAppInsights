@@ -5,25 +5,40 @@
     Use TrackMetric to send metrics that are not attached to particular events. For example, you could monitor a queue length at regular intervals. 
     Metrics are displayed as statistical charts in metric explorer, but unlike events, you can't search for individual occurrences in diagnostic search.
 
-Number 
+    Number
+    ------
     A string that identifies the metric. In the portal, you can select metrics for display by name.
 
-Average
+    Average
+    -------
     Either a single measurement, or the average of several measurements. Should be >=0 to be correctly displayed.
 
-SampleCount
+    SampleCount
+    -----------
     Count of measurements represented by the average. Defaults to 1. Should be >=1.
 
-min
+    min
+    ---
     The smallest measurement in the sample. Defaults to the average. Should be >= 0.
-max
+    
+    max
+    ---
     The largest measurement in the sample. Defaults to the average. Should be >= 0.
 
-properties
-    Map of string to string: Additional data used to filter events in the portal.
+.EXAMPLE
+        #Report the amount of work in the Q
+        Send-AIMetric -Metric "InputQueue" -Value $Q.Count
 
 .EXAMPLE
-   Example of how to use this cmdlet
+        #Send a range of metrics 
+        1..100 | %{ 
+            Send-AIMetric -Metric "Counter" -Value $_ -NoStack 
+        }
+
+.EXAMPLE
+        $Result = Invoke-SQLQuery -query "Select Count(*) as Users from $TableName" -connection $Connection 
+        Send-AIMetric -Metric "UsersInDatabase" -Value $Result.Users
+
 #>
 function Send-AIMetric
 {
@@ -47,6 +62,8 @@ function Send-AIMetric
 
         #include call stack  information (Default)
         [switch] $NoStack,
+        #The number of Stacklevels to go up 
+        [int]$StackWalk = 0,
 
         #Directly flush the AI events to the service
         [switch] $Flush
@@ -63,7 +80,7 @@ function Send-AIMetric
     #Send the callstack
     if ($NoStack -eq $false) { 
         Write-verbose 'Add Caller information'
-        $dictProperties = getCallerInfo -level 2
+        $dictProperties = getCallerInfo -level (2+$StackWalk)
     }
     #Add the Properties to Dictionary
     if ($Properties) { 
@@ -79,4 +96,6 @@ function Send-AIMetric
         $client.Flush()
     }
 }
+
+
 
