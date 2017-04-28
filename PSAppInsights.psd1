@@ -31,20 +31,26 @@
         '.\Microsoft.ApplicationInsights.2.3.0\lib\net45\Microsoft.ApplicationInsights.dll',
         #AI For fat clients 
         '.\Microsoft.ApplicationInsights.WindowsServer.2.3.0\lib\net45\Microsoft.AI.WindowsServer.dll',
+        '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.3.0\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', 
         #AI based on perfcounters 
         '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.3.0\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
         # Tracking of dependencies 
-        '.\Microsoft.ApplicationInsights.Agent.Intercept.2.0.7\lib\net45\Microsoft.AI.Agent.Intercept.dll',
         '.\Microsoft.ApplicationInsights.DependencyCollector.2.3.0\lib\net45\Microsoft.AI.DependencyCollector.dll',
-        #not (yet) used
-        '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.3.0\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', 
-        #And the additional powershell modules 
-        '.\AIPerformanceCollector.psm1',
-        '.\AIDependency.psm1',
-        '.\AIException.psm1',                   
-        '.\AIMetrics.psm1',
-        '.\AITrace.psm1',
+        '.\Microsoft.ApplicationInsights.Agent.Intercept.2.0.7\lib\net45\Microsoft.AI.Agent.Intercept.dll',
+        #And the additional powershell modules
+        # Send Base event types 
         '.\AIEvent.psm1',
+        '.\AITrace.psm1',
+        '.\AIMetrics.psm1',
+        # Exceptions and errors 
+        '.\AIException.psm1',   
+        # Waiting for dependencies                 
+        '.\AIDependency.psm1',
+        #perf Counter 
+        '.\AIPerformanceCollector.psm1',
+        #Live perf counters 
+        '.\LiveMetrics.psm1',
+
     #   '.\AIOperation.psm1',
         '.\HelperFunctions.psm1'
     )
