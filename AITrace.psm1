@@ -51,7 +51,11 @@ function Send-AITrace
     #Add the Properties to Dictionary
     if ($Properties) { 
         foreach ($h in $Properties.GetEnumerator() ) {
-            $dictProperties.Add($h.Name, $h.Value)
+            Try { 
+                $dictProperties.Add($h.Name, $h.Value)
+            } Catch [ArgumentException] {
+                Write-Verbose "Could not add $($h.Name)"
+            }
         }
     }
     $sev = [Microsoft.ApplicationInsights.DataContracts.SeverityLevel]$SeverityLevel

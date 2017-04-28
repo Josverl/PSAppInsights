@@ -117,7 +117,8 @@ param(
     #The level to track back should not exceed the depth of the callstack, so limit it where needed 
     $level = [Math]::Min( $level, $Stack.Count -1 )
     Write-Verbose "getCallerVersion -level $level"
-    [Version]$CallerVersion = $null
+    #Default Caller Version to 0.0
+    [Version]$CallerVersion = '0.0'
     try { 
         #Get the caller info
         $caller = $Stack[$level] 

@@ -302,12 +302,12 @@ Describe "PSAppInsights Module" {
             {Send-AIException -Exception  $ex } | Should not throw 
 
         }
-        It 'can log an Exception Via an Error object ' -Pending {
+        It 'can log an Exception Via an Error object ' {
             {Send-AIException -Severity 4 -Error $Er  } | Should not throw 
       
         }
 
-        It 'can log an Exception - Complex' -Pending  {
+        It 'can log an Exception - Complex' {
             {Send-AIException -Client $client -Severity 4 -Exception $ex -Properties $PropHash  } | Should not throw 
             {Send-AIException -Client $client -Severity 4 -Exception $ex -Metrics $MetricHash   } | Should not throw 
             {Send-AIException -Client $client -Severity 4 -Exception $ex -Metrics $MetricHash -Properties $PropHash  } | Should not throw 
