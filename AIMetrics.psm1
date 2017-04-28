@@ -77,7 +77,7 @@ function Send-AIMetric
     #Setup dictionaries     
     $dictProperties = New-Object 'system.collections.generic.dictionary[[string],[string]]'
 
-    #Send the callstack
+    #Add the callstack
     if ($NoStack -ne $True) { 
         Write-verbose 'Add Caller information'
         $dictProperties = getCallerInfo -level (2+$StackWalk)
@@ -88,10 +88,10 @@ function Send-AIMetric
             $dictProperties.Add($h.Name, $h.Value)
         }
     }
+    #Send the Metric 
     $client.trackMetric($Metric, $Value, $dictProperties);
 
-   # $client.trackMetric.OverloadDefinitions
-
+    #Flush the client is requested
     if ($Flush) { 
         $client.Flush()
     }
