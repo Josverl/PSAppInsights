@@ -2,7 +2,7 @@
  # Dependency
 #>
 
-function new-Stopwatch
+function New-Stopwatch
 {
     return [System.Diagnostics.Stopwatch]::StartNew();
 }
@@ -16,6 +16,11 @@ function new-Stopwatch
 .EXAMPLE
    Example of how to use this cmdlet
 .EXAMPLE
+   # Measure and report the time taken by a command 
+    Measure-Command { 
+           Connect-AADGraph -tenant $tenantname -graphVer "1.6" -Credentials $AADCredential
+    } | Send-AIDependency -Name "AADGraph" -CommandName "Connect" -DependencyTypeName "AAD" -DependencyKind Other
+   
    Another example of how to use this cmdlet
 #>
 
@@ -41,7 +46,9 @@ function Send-AIDependency
 
         #HTTP result code
         [bool]$Success = $true, 
-        [ValidateRange(0,999)]
+        #Hide this resultcode parameter as it appears to be defunt in 2.3.0
+        [Parameter(DontShow)]
+        #[ValidateRange(0,999)]
         [int]$ResultCode = 200, 
 
         #The timestamp for the event; defaults to current date/time
@@ -81,8 +88,13 @@ function Send-AIDependency
         $TelDependency.CommandName = $CommandName
         $TelDependency.DependencyTypeName = $DependencyTypeName
 
+        #Resultcode is apperantly removed from AI 2.3.0
+        If ($ResultCode -ne 200) {
+            Write-Warning "Resultcode cannot be reported in AI 2.3.0"
+        }
         $TelDependency.Success = $Success
-        $TelDependency.ResultCode = $ResultCode
+
+        #$TelDependency.ResultCode = $ResultCode
     
         if ($TimeSpan ) { 
             $TelDependency.Duration = $TimeSpan

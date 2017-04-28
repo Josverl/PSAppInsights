@@ -22,9 +22,14 @@ function Send-AITrace
         [Hashtable]$Properties,
 
 
-        #include call stack  information (Default)
+        #Disable include call stack information of the caller
         [switch] $NoStack,
+        #include All call stack information 
+        [switch] $FullStack,
         
+        #The number of Stacklevels to go up 
+        [int]$StackWalk = 0,
+
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
         [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
@@ -40,20 +45,23 @@ function Send-AITrace
     $dictProperties = New-Object 'system.collections.generic.dictionary[[string],[string]]'
 
     #Send the callstack
-    if ($NoStack -eq $false) { 
-        $dictProperties = getCallerInfo -level 2
+    if ($NoStack -ne $True) { 
+        $dictProperties = getCallerInfo -level (2+$StackWalk) -FullStack:$FullStack
     }
     #Add the Properties to Dictionary
     if ($Properties) { 
         foreach ($h in $Properties.GetEnumerator() ) {
-            $dictProperties.Add($h.Name, $h.Value)
+            Try { 
+                $dictProperties.Add($h.Name, $h.Value)
+            } Catch [ArgumentException] {
+                Write-Verbose "Could not add $($h.Name)"
+            }
         }
     }
     $sev = [Microsoft.ApplicationInsights.DataContracts.SeverityLevel]$SeverityLevel
 
     $client.TrackTrace($Message, $Sev, $dictProperties)
     #$client.TrackTrace($Message)
-    
     if ($Flush) { 
         $client.Flush()
     }

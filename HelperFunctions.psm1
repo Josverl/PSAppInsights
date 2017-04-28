@@ -58,55 +58,49 @@ function Get-StringHash {
 <#
     Helper function to get the script and the line number of the calling function
 #>
-function getCallerInfo ($level = 2)
-{
-[CmdletBinding()]
-    $dict = New-Object 'system.collections.generic.dictionary[[string],[string]]'
-    try { 
-        #Get the caller info
-        $caller = (Get-PSCallStack)[$level] 
-        #get only the script name
-        $ScriptName = '<unknown>'
-        if ($caller.Location) {
-            $ScriptName = ($caller.Location).Split(':')[0]
-        }
-
-        $dict.Add('ScriptName', $ScriptName)
-        $dict.Add('ScriptLineNumber', $caller.ScriptLineNumber)
-        $dict.Add('Command', $caller.Command)
-        $dict.Add('FunctionName', $caller.FunctionName)
-
-        return $dict
-
-    } catch { return $null}
-}
-
-<#
-    Helper function to get the calling script or module version#>
-function getCallerVersion 
+function getCallerInfo 
 {
 [CmdletBinding()]
 param(
-    [int]$level = 2
+    #number of levels to go back in the call stack 
+    [ValidateRange(1,  99)]
+    [int]$level = 2,
+    [Switch]$FullStack 
+
 )
+    $dict = New-Object 'system.collections.generic.dictionary[[string],[string]]'
     try { 
         #Get the caller info
-        $caller = (Get-PSCallStack)[$level] 
-        #get only the script name
-        $ScriptName = '<unknown>'
-        if ($caller.Location) {
-            $ScriptName = ($caller.Location).Split(':')[0]
+        $Stack = Get-PSCallStack
+        #The level to track back should not exceed the depth of the callstack, so limit it where needed 
+        $level = [Math]::Min( $level, $Stack.Count -1 )
+        #$caller = $Stack[$level] 
+        #Get Base information straight from the Stack 
+        $dict.Add('Command',            $Stack[$level].Command )
+        $dict.Add('ScriptLineNumber',   $Stack[$level].ScriptLineNumber)
+        $dict.Add('Position',           $Stack[$level].Position)
+        $dict.Add('FunctionName',       $Stack[$level].FunctionName)
+        $dict.Add('Location',           $Stack[$level].Location)
+
+        #Extract the scriptname from the location
+        $Scriptname = $Stack[$level].Location
+        if ( [string]::IsNullOrEmpty( $Scriptname ) -ne $true ) {
+            #Split  on : and take the first node only
+            
+            $dict.Add('Script',   $Scriptname.Split(':')[0])
         }
-
-        $dict.Add('ScriptName', $ScriptName)
-        $dict.Add('ScriptLineNumber', $caller.ScriptLineNumber)
-        $dict.Add('Command', $caller.Command)
-        $dict.Add('FunctionName', $caller.FunctionName)
-
+         #  Also Add the complete Stack 
+        If ($FullStack) {
+            #$ReportLevels = 1 + $Stack.Count - $level
+            $StackTrace = $Stack | Select -Skip $level -Property ScriptName,ScriptLineNumber,FunctionName,Command,Location,Arguments | ConvertTo-Json -Compress
+            $dict.Add( 'PSCallStack', $StackTrace)
+        }
+  
         return $dict
 
     } catch { return $null}
 }
+
 
 <#
     Helper function to get the calling script or module version
@@ -116,20 +110,25 @@ function getCallerVersion
 [CmdletBinding()]
 param(
     #Get version from X levels up in the call stack
-    [int]$level = 1
+    [int]$level = 2 #Use 2 as default as this is mostly an internal function
 )
+    #Get the caller info
+    $Stack = Get-PSCallStack
+    #The level to track back should not exceed the depth of the callstack, so limit it where needed 
+    $level = [Math]::Min( $level, $Stack.Count -1 )
     Write-Verbose "getCallerVersion -level $level"
-    [Version]$V = $null
+    #Default Caller Version to 0.0
+    [Version]$CallerVersion = '0.0'
     try { 
         #Get the caller info
-        $caller = (Get-PSCallStack)[$level] 
+        $caller = $Stack[$level] 
         #if script
         if ( -NOT [string]::IsNullOrEmpty( $caller.ScriptName)){
             $info = Test-ScriptFileInfo -Path $caller.ScriptName -ErrorAction SilentlyContinue
             if ( $info ) {
-                $v = $info.Version
-                Write-Verbose "getCallerVersion found script version $v"
-                return $v
+                $CallerVersion = $info.Version
+                Write-Verbose "getCallerVersion found script version $CallerVersion"
+                return $CallerVersion
             }
         }       
     } catch { }
@@ -138,9 +137,9 @@ param(
         $Filename = [System.IO.Path]::ChangeExtension( $caller.ScriptName, 'psd1')
         $info = Test-ModuleManifest -Path $Filename -ErrorAction SilentlyContinue
         if ( $info ) {
-            $v = $info.Version
-            Write-Verbose "getCallerVersion found Module version $v"
-            return $v
+            $CallerVersion = $info.Version
+            Write-Verbose "getCallerVersion found Module version $CallerVersion"
+            return $CallerVersion
             break;
         }
     } catch {} # Continue 
@@ -150,20 +149,20 @@ param(
         $Folders= @( $Filename.Split('\') )
         $found = $false
         foreach( $f in $Folders ) {
-            Try { $V = [version]$f ; $found = $true} 
+            Try { $CallerVersion = [version]$f ; $found = $true} 
             catch {}
         }
         if ($found) {
             #return last found version
-            Write-Verbose "getCallerVersion found Folder version $v"
-            return $v
+            Write-Verbose "getCallerVersion found Folder version $CallerVersion"
+            return $CallerVersion
         }
     } catch {
         Write-Verbose "getCallerVersion no version found"         
-        return $v
+        return $CallerVersion
     }
     Write-Verbose "no version found"
-    return $v
+    return $CallerVersion
 }
 
 
@@ -171,7 +170,7 @@ param(
  # Credits: Joel Bennet
  # http://poshcode.org/4968
 
- Chnaged to not allow Nulls by default 
+ Changed to not allow Nulls by default 
 #>
 
 

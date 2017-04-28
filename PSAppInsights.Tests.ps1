@@ -1,9 +1,9 @@
 ﻿<#PSScriptInfo
 .DESCRIPTION 
     Pester tests for PowerShell App Insights Module
-    The script .Version 0.3 is used in test, 
+    The script .Version 1.2.3 is used in test, 
     do not modify withouth changing the test can detect the calling script version' 
-.VERSION 0.3
+.VERSION 1.2.3
 .AUTHOR Jos Verlinde
 .GUID bcff6b0e-509e-4c9d-af31-dccc41e148d0
 #>
@@ -19,26 +19,22 @@ if ($TestInstalledModule) {
     $m | Format-Table Name,version, Path
 
 } else { 
-    #Load Module under development 
-    Import-Module ".\PSAppInsights.psd1" -Force  
+    Write-Verbose '--------- Load Module under development ------------' -Verbose 
+    Import-Module ".\PSAppInsights.psd1" -Force 
+
 }
 
 Describe "PSAppInsights Module" {
     It "loads the AI Dll" {
         New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue -Verbose| Should not be $null
     }
+    BeforeAll { 
+        #AI Powershell-test 
+        $key = "b437832d-a6b3-4bb4-b237-51308509747d"
 
-    #AI Powershell-test 
-    $key = "b437832d-a6b3-4bb4-b237-51308509747d"
-
-    $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
-    $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 
-
-    It 'can log live metrics' {
-        { Start-AILiveMetrics -Key $key } | Should not Throw
-        $Global:AISingleton.QuickPulse | Should not be $null
+        $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
+        $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 
     }
-
     Context 'New Session' {
 
         It 'can Init a new log AllowPII session' {
@@ -84,9 +80,25 @@ Describe "PSAppInsights Module" {
             $client = New-AIClient -Key $key -AllowPII -Init Device, Domain, Operation
 
             #Check Version number  (match this script's version ) 
-            $Client.Context.Component.Version | should be "0.3"  
+            $Client.Context.Component.Version | should be "1.2.3"  
 
         }
+
+        it 'can log permon counters in developer mode' {
+            $Global:AISingleton.PerformanceCollector = $null
+            { start-AIPerformanceCollector -key $key -DeveloperMode }| Should not throw
+            $Global:AISingleton.PerformanceCollector | Should not be $null
+        }
+
+        it 'can log permon counters in with a specified interval' {
+            $Global:AISingleton.PerformanceCollector = $null
+
+            { start-AIPerformanceCollector -key $key -SendingInterval 360 }| Should not throw
+            $Global:AISingleton.PerformanceCollector | Should not be $null
+            $TimeSpan = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.SendingInterval
+            $TimeSpan.TotalSeconds | Should be 360
+        }
+
 
         it 'can log permon counters' {
             $Global:AISingleton.PerformanceCollector = $null
@@ -98,10 +110,52 @@ Describe "PSAppInsights Module" {
             $Global:AISingleton.PerformanceCollector | Should not be $null
 
         }
-        #Mark Pester traffic As Synthethic traffic
+
+        It 'can run in developer mode ' {
+            #Mark Pester traffic As Synthethic traffic (Keep on ) 
+            $Client = $Null
+            { $client = New-AIClient -Key $key -DeveloperMode} | Should not Throw
+            $client = New-AIClient -Key $key -DeveloperMode
+            $Client | Should not be $Null
+        }
+
+
+
+        It 'Can set the SendingInterval' {
+            #Mark Pester traffic As Synthethic traffic (Keep on ) 
+            $Client = $Null
+            #Check out of bound parameters 
+            { $client = New-AIClient -Key $key -SendingInterval 0} | Should Throw
+            { $client = New-AIClient -Key $key -SendingInterval -1} | Should Throw
+            { $client = New-AIClient -Key $key -SendingInterval 1441} | Should Throw
+            
+            #Check some valid ranges 
+            
+            ( 1440, 10 , 360 , 60 ) | ForEach-Object {  
+                $Seconds = $_
+                { $client = New-AIClient -Key $key -SendingInterval $Seconds} | Should not Throw
+                $Client = $Null
+                $client = New-AIClient -Key $key -SendingInterval $Seconds
+                $Client | Should not be $Null
+                $TimeSpan = [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.TelemetryChannel.SendingInterval
+                $TimeSpan.TotalSeconds | Should be $Seconds
+            } 
+
+        }
+
+
+
+
+        It 'Mark Pester traffic As Synthethic traffic (Keep on ) ' {
+            #Mark Pester traffic As Synthethic traffic (Keep on ) 
+            $SynthMarker= "Pester run $((get-date).ToString('g'))"
+            $client = New-AIClient -Key $key -Synthetic $SynthMarker
+        }
+
+        #TestHack to avoid loosing the vlau of client due to scope 
+        #Todo: improve logic
         $SynthMarker= "Pester run $((get-date).ToString('g'))"
         $client = New-AIClient -Key $key -Synthetic $SynthMarker
-
 
         It 'can Init a new log session' {
 
@@ -128,14 +182,25 @@ Describe "PSAppInsights Module" {
 
         }
 
+        It 'can log live metrics'  {
+            { Start-AILiveMetrics -Key $key } | Should not Throw
+            $Global:AISingleton.QuickPulse | Should not be $null
+        }
+
         #-----------------------------------------
 
-        It 'can log a trace ' {
-            {Send-AITrace -Client $client -Message "Test Trace Message" } | Should not throw 
+        It 'can log a trace .1' {
+            Send-AITrace -Message "Test Trace Message" 
             
-            #using Global 
             {Send-AITrace -Message "Test Trace Message" } | Should not throw 
 
+            {Send-AITrace -Client $client -Message "Test Trace Message" } | Should not throw 
+        }            
+        It 'can log a trace .3' {
+            #using Global 
+            {Send-AITrace -Message "Test Trace Message" } | Should not throw 
+        }            
+        It 'can log a trace .3' {
             {Send-AITrace -Message "Test Trace Message" -SeverityLevel 0 } | Should not throw 
 
         }
@@ -178,6 +243,13 @@ Describe "PSAppInsights Module" {
         
         }
 
+        It 'can log an event - Stackwalk ' {
+            {Send-AIEvent -Client $client -Event "Test event - Simple, no stack" -StackWalk 1 } | Should not throw 
+        }
+
+        It 'can log an event - Negative Stackwalk' -Skip {
+                {Send-AIEvent -Client $client -Event "Test event - Simple, no stack" -StackWalk -1 } | Should  throw 
+        }
 
         It 'can log an event - with metrics'  {
             # BUGBUG on the sending end 
@@ -230,12 +302,12 @@ Describe "PSAppInsights Module" {
             {Send-AIException -Exception  $ex } | Should not throw 
 
         }
-        It 'can log an Exception Via an Error object ' -Pending {
+        It 'can log an Exception Via an Error object ' {
             {Send-AIException -Severity 4 -Error $Er  } | Should not throw 
       
         }
 
-        It 'can log an Exception - Complex' -Pending  {
+        It 'can log an Exception - Complex' {
             {Send-AIException -Client $client -Severity 4 -Exception $ex -Properties $PropHash  } | Should not throw 
             {Send-AIException -Client $client -Severity 4 -Exception $ex -Metrics $MetricHash   } | Should not throw 
             {Send-AIException -Client $client -Severity 4 -Exception $ex -Metrics $MetricHash -Properties $PropHash  } | Should not throw 
@@ -290,5 +362,82 @@ Describe "PSAppInsights Module" {
 
 
     }
+}
+
+
+Describe 'AI Dependency Nested Module' {
+
+    BeforeAll {
+
+        #AI Powershell-test 
+
+        $key = "b437832d-a6b3-4bb4-b237-51308509747d"
+        $Watch1 = new-Stopwatch
+    }
+    
+#    AfterAll {
+#        Remove-Module -Name AIDependency -Force -ErrorAction SilentlyContinue
+#    }
+
+    It 'can start a AI Client with dependency tracking' {
+        $client = New-AIClient -Key $key -Initializer Dependency
+
+        {$c2 = New-AIClient -Key $key -Initializer Dependency} | Should not Throw
+        $client | Should not be $null
+    }
+
+    It 'can start a Stopwatch' {
+        $Watch1 | should not be $null
+        $Watch1.GetType()  | should be 'System.Diagnostics.Stopwatch'
+    }
+    It 'Depedency can use a stopwatch' {
+        $Watch1.Stop()
+        { Send-AIDependency -StopWatch $Watch1 -Name "TEST Dept." } | Should not Throw
+    } 
+    
+    It 'Dependency can use a Duration - 1' {
+         $TS = Measure-Command { Start-Sleep (Get-Random 1 ) }
+        { Send-AIDependency -TimeSpan $TS -Name "TEST Dept." } | Should not Throw
+    }
+    It 'Dependency can use a Duration from the pipeline - 2'  {
+
+        {  Measure-Command { Start-Sleep (Get-Random 1 ) } | Send-AIDependency -Name "TEST Dept." } | Should not Throw
+    
+    }
+    $TS = Measure-Command { Start-Sleep (Get-Random 1 ) }
+    It 'Dependency can Send Failure'  {
+        {   
+            Send-AIDependency -Name "TEST Dept." -TimeSpan $TS -Success $false # not in 2.3.0 -ResultCode 500 
+
+        
+         } | Should not Throw
+    }
+
+    It 'Dependency can be set to SQL'  {
+        {   
+            Send-AIDependency -Name "TEST SQL." -TimeSpan $TS -Success $True -DependencyKind SQL -CommandName "DROP *"
+        
+         } | Should not Throw
+    }
+
+    It 'Dependency can be set to HTTP'  {
+        {   
+            Send-AIDependency -Name "TEST HTTP" -TimeSpan $TS -Success $True -DependencyKind HTTP -CommandName "http://powershellgallery.com"
+        
+         } | Should not Throw
+    }
+
+    It 'can do a few measurements' { 
+
+        "bing.com", "google.com" | ForEach-Object{ 
+            $url = $_
+            $Timespan = Measure-Command {
+                Invoke-WebRequest $url
+            }
+
+            {Send-AIDependency -Name $url -TimeSpan $Timespan -DependencyKind HTTP  } | Should not Throw
+        }
+    }
+
 }
 

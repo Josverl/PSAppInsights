@@ -129,15 +129,18 @@ Task Copy   -description "Copy items to the release folder" `
         #Note the subfolders are not copied :-( 
         
         #Robocopy to the rescue 
-        &robocopy "$BasePath" "$ReleaseDir" * /XD Release .git .vscode scratch /XF .git* *.tests.ps1 build.ps1 default.ps1 /S /NP /NFL /NDL
+        &robocopy "$BasePath" "$ReleaseDir" * /XD Release Released Tests .git .vscode scratch images /XF .git* *.tests.ps1 build.ps1 default.ps1 nuget.exe /S /NP /NFL /NDL
 
         #Clean up the unneeded folders and stuff underneath the APplication Insights folders 
-        $Modulefolders = Get-ChildItem -Path $ReleaseDir -Directory -Filter "Microsoft.ApplicationInsights.*"
+        $Modulefolders = Get-ChildItem -Path $ReleaseDir -Directory -Filter "Microsoft.*"
+
+        #Clean up the unneeded XML Files 
+        Get-ChildItem -Path $ReleaseDir -File -Recurse -Filter "Microsoft.AI.*.xml" | Remove-Item
 
         Foreach ($mod in $Modulefolders) {
             #Now look for the folders in the folder 
             $SubFolders = Get-ChildItem -Path $Mod.FullName -Directory -Recurse
-            #back to front to allow recursive de
+            #back to front to allow recursive deletion
             [Array]::Reverse($SubFolders)
 
             foreach ($folder in $SubFolders) {
@@ -163,8 +166,7 @@ Task Copy   -description "Copy items to the release folder" `
 
 Task Sign   -Depends Copy `
             -RequiredVariables ReleaseDir, Target {
-    "Sign"
-    
+  
     #Just get the first codesigning cert 
     $CodeSigningCerts = @(gci cert:\currentuser\my -codesigning)
 
@@ -226,7 +228,6 @@ Task TestPublish -Depends Sign `
 
 
 Task TestInstall -Depends TestPublish{
-    "Test Install"
     if ($target.Type -ieq "Module" ){
 
         $MFT = Test-ModuleManifest -Path (Join-Path $ReleaseDir -ChildPath "$moduleName.psd1") 
@@ -291,5 +292,23 @@ Task Publish -Depends TestInstall {
         $tag = "{0}_{1}" -f $target.BaseName,$MFT.Version.ToString()
         Write-Verbose "Git Tag $tag" -Verbose
         Git tag $tag
+    }
+}
+
+Task Install  {
+
+    if ($target.Type -ieq "Module" ){
+
+        $MFT = Test-ModuleManifest -Path (Join-Path $ReleaseDir -ChildPath "$moduleName.psd1") 
+        find-Module -Name $mft.Name -RequiredVersion $mft.version -Repository $PublishRepository
+        install-Module -Name $mft.Name -RequiredVersion $mft.version -Repository $PublishRepository -Force -Scope CurrentUser
+        Get-InstalledModule -Name $mft.Name
+
+    } else {
+        $MFT = Test-ScriptFileInfo -Path (Join-Path $ReleaseDir -ChildPath $target.Name ) 
+
+        find-script -Name $mft.Name -RequiredVersion $mft.version -Repository $PublishRepository
+        install-script -Name $mft.Name -RequiredVersion $mft.version -Repository $PublishRepository -Force -Scope CurrentUser
+        Get-InstalledScript -Name $mft.Name -RequiredVersion $mft.version | FT Name, Version, Repo*, InstalledLocation
     }
 }

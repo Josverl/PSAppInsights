@@ -33,6 +33,8 @@ function Send-AIPageView
         
         #include call stack  information (Default)
         [switch] $NoStack,
+        #The number of Stacklevels to go up 
+        [int]$StackWalk = 0,
 
         #Directly flush the AI events to the service
         [switch] $Flush
@@ -48,8 +50,8 @@ function Send-AIPageView
     $dictMetrics = New-Object 'system.collections.generic.dictionary[[string],[double]]'
 
     #Send the callstack
-    if ($NoStack -eq $false) { 
-        $dictProperties = getCallerInfo -level 2
+    if ($NoStack -ne $True) { 
+        $dictProperties = getCallerInfo -level (2+$StackWalk)
     }
     #Add the Properties to Dictionary
     if ($Properties) { 
