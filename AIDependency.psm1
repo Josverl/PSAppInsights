@@ -40,14 +40,22 @@ function Send-AIDependency
 
         #Dependency Name
         [Parameter(Mandatory=$true)]
-        [string]$Name = "Update mailbox",
+        [string]$Name = "External Operation",
+
         [string]$CommandName = $name,
+
+        #Type of dependecy 
+        [ValidateSet("HTTP", "SQL", "Other")]
+        [string]$DependencyKind = "Other",
+
         [string]$DependencyTypeName = $name,
 
         #HTTP result code
         [bool]$Success = $true, 
-        #Hide this resultcode parameter as it appears to be defunt in 2.3.0
+
+        #Hide the resultcode parameter as it appears to be defunct in 2.3.0
         [Parameter(DontShow)]
+        #Resultcode alligs to HHTP result codes
         #[ValidateRange(0,999)]
         [int]$ResultCode = 200, 
 
@@ -56,9 +64,6 @@ function Send-AIDependency
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
         [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
-        #Type of dependecy 
-        [ValidateSet("HTTP", "SQL", "Other")]
-        [string]$DependencyKind = "Other",
 
 
         #Directly flush the AI events to the service
@@ -67,9 +72,11 @@ function Send-AIDependency
     Begin { 
         #Check for a specified AI client
         if ($Client -eq $null) {
-            throw [System.Management.Automation.PSArgumentNullException]::new($script:ErrNoClient)
+            Write-Verbose "No AIClient was found - Will not send Telemetry"
+            Break #Silently Stop Processing
         }
     } 
+
     Process { 
 
         #check if a timespan has been provided 
@@ -88,13 +95,17 @@ function Send-AIDependency
         $TelDependency.CommandName = $CommandName
         $TelDependency.DependencyTypeName = $DependencyTypeName
 
-        #Resultcode is apperantly removed from AI 2.3.0
-        If ($ResultCode -ne 200) {
-            Write-Warning "Resultcode cannot be reported in AI 2.3.0"
-        }
+        Try { 
+            $TelDependency.ResultCode = $ResultCode
+        } catch { 
+            #Resultcode is apperantly removed from AI 2.3.0
+            If ($ResultCode -ne 200) {
+                Write-Warning "Resultcode cannot be reported in AI 2.3.0"
+            }
+        } 
         $TelDependency.Success = $Success
 
-        #$TelDependency.ResultCode = $ResultCode
+        
     
         if ($TimeSpan ) { 
             $TelDependency.Duration = $TimeSpan
