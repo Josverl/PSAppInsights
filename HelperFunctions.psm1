@@ -73,7 +73,7 @@ param(
         #Get the caller info
         $Stack = Get-PSCallStack
         #The level to track back should not exceed the depth of the callstack, so limit it where needed 
-        $level = [Math]::Min( $level, $Stack.Count -1 )
+        $level = [Math]::Min( $level, $Stack.Length -1 )
         #$caller = $Stack[$level] 
         #Get Base information straight from the Stack 
         $dict.Add('Command',            $Stack[$level].Command )
@@ -115,7 +115,7 @@ param(
     #Get the caller info
     $Stack = Get-PSCallStack
     #The level to track back should not exceed the depth of the callstack, so limit it where needed 
-    $level = [Math]::Min( $level, $Stack.Count -1 )
+    $level = [Math]::Min( $level, $Stack.Length -1 )
     Write-Verbose "getCallerVersion -level $level"
     #Default Caller Version to 0.0
     [Version]$CallerVersion = '0.0'

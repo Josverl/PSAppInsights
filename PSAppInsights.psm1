@@ -26,11 +26,11 @@ if ( $Global:AISingleton -eq $null ) {
 } 
 <#
 .Synopsis
-   Start a new AI Client 
+   Start a new Application Insights Client to Log events and timings to AI
 .DESCRIPTION
    Long description
 .EXAMPLE
-   Example of how to use this cmdlet
+   $C1 = New-AIClient -InstrumentationKey $key
 
 #>
 function New-AIClient
@@ -45,11 +45,11 @@ function New-AIClient
                    ValueFromPipelineByPropertyName=$true,
                    Position=0)]
         [Alias("Key")]
-        $InstrumentationKey,
+        [String]$InstrumentationKey,
         #An Identifier to use for this session
         [string]$SessionID = ( New-Guid), 
         #Operation, by default the Scriptname will be used
-        [string]$OperationID = ((getCallerInfo).ScriptName ), # Use the scriptname if it can be found
+        [string]$OperationID , # Use the scriptname if it can be found
         #Version of the application or Component, defaults to retrieving theversion from the script
         $Version,
         # Set to indicate messages sent from or during a test 
@@ -77,6 +77,20 @@ function New-AIClient
 
     Process
     {
+        if ( [String]::IsNullOrEmpty($OperationID) ){
+        #Find a sensible toplevel Operation ID
+            #Get the topmost caller's information
+            $TopInfo = getCallerInfo -level (Get-PSCallStack).Length
+            if     ($TopInfo.Script)                           { $OperationID = $TopInfo.Script } 
+            else { 
+                if ($TopInfo.Command -ne '<ScriptBlock>') { $OperationID = $TopInfo.Command } 
+                else { 
+                    if ($TopInfo.FunctionName -ne '<ScriptBlock>') { $OperationID = $TopInfo.FunctionName }
+                    # Otherwise AI will set a GUID 
+                }
+            }
+        }
+        
         try { 
             Write-Verbose "create Telemetry client"
             # This is a singleton that controls all New AI Client sessions for this process from this moment 
