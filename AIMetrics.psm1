@@ -58,7 +58,7 @@ function Send-AIMetric
 
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client ,
 
         #include call stack  information (Default)
         [switch] $NoStack,
@@ -72,8 +72,17 @@ function Send-AIMetric
     Write-Verbose "Send-AIMetric $Metric = $Value"
     #Check for a specified AI client
     if ($Client -eq $null) {
-        throw [System.Management.Automation.PSArgumentNullException]::new($script:ErrNoClient)
+        If ( ($Global:AISingleton ) -AND ( $Global:AISingleton.Client ) ) {
+            #Use Current Client
+            $Client = $Global:AISingleton.Client
+        }
     }
+    #no need to do anything if there is no client
+    if ($Client -eq $null) { 
+        Write-Verbose 'No AI Client found'
+        return 
+    }  
+
     #Setup dictionaries     
     $dictProperties = New-Object 'system.collections.generic.dictionary[[string],[string]]'
 

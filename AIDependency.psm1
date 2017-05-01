@@ -63,7 +63,7 @@ function Send-AIDependency
         $Timestamp = (Get-Date), 
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client ,
 
 
         #Directly flush the AI events to the service
@@ -72,12 +72,19 @@ function Send-AIDependency
     Begin { 
         #Check for a specified AI client
         if ($Client -eq $null) {
-            Write-Verbose "No AIClient was found - Will not send Telemetry"
-            Break #Silently Stop Processing
+            If ( ($Global:AISingleton ) -AND ( $Global:AISingleton.Client ) ) {
+                #Use Current Client
+                $Client = $Global:AISingleton.Client
+            }
         }
     } 
 
     Process { 
+        #no need to do anything if there is no client
+        if ($Client -eq $null) { 
+            Write-Verbose 'No AI Client found'
+            return 
+        }  
 
         #check if a timespan has been provided 
         if ( $StopWatch -eq $null -and $TimeSpan -eq $null ) {

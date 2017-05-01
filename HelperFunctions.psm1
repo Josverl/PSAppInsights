@@ -140,7 +140,6 @@ param(
             $CallerVersion = $info.Version
             Write-Verbose "getCallerVersion found Module version $CallerVersion"
             return $CallerVersion
-            break;
         }
     } catch {} # Continue 
 
