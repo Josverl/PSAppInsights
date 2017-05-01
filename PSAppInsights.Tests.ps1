@@ -24,6 +24,44 @@ if ($TestInstalledModule) {
 
 }
 
+Describe 'should fail silently if no client is started' {
+    BeforeAll {
+        Stop-AIClient -WarningAction SilentlyContinue
+        
+        $ST = New-Stopwatch
+        $ST.Start
+        #For Exception and error handling
+        $ex = new-object System.Management.Automation.ApplicationFailedException
+        try  
+        {  
+            $fileContent = Get-Content -Path "C:\Does.not.exists.txt" -ErrorAction Stop  
+        }  
+        catch  
+        {  
+            $ex = $_.Exception
+            $er = $_ 
+        }
+    }
+    AfterAll {
+        $ST.Stop()
+    }
+    It 'Should not throw errors using the default client' { 
+       {Send-AIEvent -Event 'Test'  } | Should not throw 
+       {Send-AITrace -Message 'Test Trace'  } | Should not throw 
+       {Send-AIMetric -Metric 'Test' -Value 42 } | Should not throw 
+       {Send-AIDependency -StopWatch $ST -Name 'Test'  } | Should not throw 
+       {Send-AIException -Exception  $ex } | Should not throw 
+    }
+
+    It 'Should not throw errors using a Specified client' { 
+       {Send-AIEvent -Client $null -Event 'Test'  } | Should not throw 
+       {Send-AITrace -Client $null  -Message 'Test Trace'  } | Should not throw 
+       {Send-AIMetric -Client $null  -Metric 'Test' -Value 42 } | Should not throw 
+       {Send-AIDependency -Client $null -StopWatch $ST -Name 'Test'  } | Should not throw 
+       {Send-AIException -Client $null -Exception  $ex } | Should not throw 
+    }
+}
+
 Describe "PSAppInsights Module" {
     It "loads the AI Dll" {
         New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue -Verbose| Should not be $null
@@ -34,6 +72,19 @@ Describe "PSAppInsights Module" {
 
         $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
         $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 
+
+        #For Exception and error handling
+        $ex = new-object System.Management.Automation.ApplicationFailedException
+        try  
+        {  
+            $fileContent = Get-Content -Path "C:\Does.not.exists.txt" -ErrorAction Stop  
+        }  
+        catch  
+        {  
+            $ex = $_.Exception
+            $er = $_ 
+        }
+
     }
     Context 'New Session' {
 
@@ -313,7 +364,13 @@ Describe "PSAppInsights Module" {
             {Send-AIException -Client $client -Severity 4 -Exception $ex -Metrics $MetricHash -Properties $PropHash  } | Should not throw 
       
         }
+        It 'can log a NULL Exception' -Pending {
 
+            {Send-AIException -Client $client -Exception  $NULL} | Should not throw 
+            #Using Global
+            {Send-AIException -Exception  $NULL } | Should not throw 
+
+        }
         #-----------------------------------------
 
         It 'can log a Page view ' -Skip {
