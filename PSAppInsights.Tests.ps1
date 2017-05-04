@@ -12,6 +12,16 @@ Param (
     [switch]$TestInstalledModule
 )
 
+#Load Fiddler Module to see what is sent across the wire 
+Import-Module .\Tests\FiddlerTests.psm1 -Force -DisableNameChecking
+
+#Make sure A fresh fiddler is started 
+#Stop-Fiddler 
+Ensure-Fiddler
+Write-Verbose 'Wait for fiddler' -Verbose
+Start-Sleep 4 
+Stop-FiddlerCapture
+
 Get-Module -Name 'PSAppInsights' -All | Remove-Module -Force -ErrorAction SilentlyContinue
 if ($TestInstalledModule) { 
     Write-Verbose 'Load locally installed module' -Verbose
@@ -44,6 +54,7 @@ Describe 'should fail silently if no client is started' {
     }
     AfterAll {
         $ST.Stop()
+        Stop-FiddlerCapture 
     }
     It 'Should not throw errors using the default client' { 
        {Send-AIEvent -Event 'Test'  } | Should not throw 
@@ -86,11 +97,18 @@ Describe "PSAppInsights Module" {
         }
 
     }
+    
     Context 'New Session' {
+        BeforeEach {
+            Start-FiddlerCapture 
+        }
+        AfterEach {
+            Stop-FiddlerCapture
+        }
 
         It 'can Init a new log AllowPII session' {
-
-            $client = New-AIClient -Key $key -AllowPII -Version "2.3.4"
+            $Version = "2.3.4"
+            $client = New-AIClient -Key $key -AllowPII -Version $Version
             
             $Global:AISingleton.Client | Should not be $null
 
@@ -104,18 +122,62 @@ Describe "PSAppInsights Module" {
             $client.Context.User.Id        | Should be $env:USERNAME
 
             #Check Version number detection
-            $Client.Context.Component.Version | should be "2.3.4"
+            $Client.Context.Component.Version | should be $Version
+            Send-AIEvent 'Ping'
+            Flush-AIClient
+            #Now check what has been transmitted 
+            $Capture = Get-FiddlerCapture  
+            $Capture.AllTelemetry.Count | Should be 1
+            if ($Capture.AllTelemetry.Count -eq 1) { 
+                $Capture.AllResponses[0].itemsAccepted | Should be 1
+                $Capture.AllTelemetry[0].tags.'ai.application.ver' | Should be $Version
+                $Capture.AllTelemetry[0].tags.'ai.user.id' | Should be $env:USERNAME
+                $Capture.AllTelemetry[0].tags.'ai.device.id' | Should be $env:COMPUTERNAME 
 
+                $Capture.AllTelemetry[0].tags.'ai.user.userAgent' | Should be  $Host.Name
+
+                $Capture.AllTelemetry[0].tags.'ai.operation.id' | Should be "PSAppInsights.Tests.ps1"
+            }
         }
 
 
         It 'can Init Device properties' {
 
             { $TmtClient = New-AIClient -Key $key  -Init Device } | Should not Throw 
+            
+            Send-AIEvent 'Ping'
+            Flush-AIClient
+            #Now check what has been transmitted 
+            $Capture = Get-FiddlerCapture  
+            $Capture.AllTelemetry.Count | Should be 1
+            if ($Capture.AllTelemetry.Count -eq 1) { 
+                $Capture.AllResponses[0].itemsAccepted | Should be 1
+
+                $Capture.AllTelemetry[0].tags.'ai.device.osVersion'     | Should not be "" #    : 10.0.14393
+                $Capture.AllTelemetry[0].tags.'ai.device.oemName'       | Should not be "" #      : LENOVO
+                $Capture.AllTelemetry[0].tags.'ai.device.model'         | Should not be "" #        : 20FRS02N12
+                $Capture.AllTelemetry[0].tags.'ai.device.type'          | Should not be "" #         : PC
+
+            }            
         }
         it 'can Init  Domain properties' {    
 
             { $TmtClient = New-AIClient -Key $key -Init Domain } | Should not Throw 
+
+            Send-AIEvent 'Ping'
+            Flush-AIClient
+            #Now check what has been transmitted 
+            $Capture = Get-FiddlerCapture  
+            $Capture.AllTelemetry.Count | Should be 1
+            if ($Capture.AllTelemetry.Count -eq 1) { 
+                $Capture.AllResponses[0].itemsAccepted | Should be 1
+                
+                #TODO Add tests
+                #$Capture.AllTelemetry[0].tags.'ai.device.osVersion'     | Should not be "" #    : 10.0.14393
+                #$Capture.AllTelemetry[0].tags.'ai.device.oemName'       | Should not be "" #      : LENOVO
+                #$Capture.AllTelemetry[0].tags.'ai.device.model'         | Should not be "" #        : 20FRS02N12
+                #$Capture.AllTelemetry[0].tags.'ai.device.type'          | Should not be "" #         : PC
+            }                            
         }
         it 'can Init Operation Correlation' {    
 
@@ -129,9 +191,22 @@ Describe "PSAppInsights Module" {
 
         it 'can detect the calling script version' {
             $client = New-AIClient -Key $key -AllowPII -Init Device, Domain, Operation
-
+           
             #Check Version number  (match this script's version ) 
-            $Client.Context.Component.Version | should be "1.2.3"  
+            $ScriptVersion = "1.2.3" 
+            $Client.Context.Component.Version | should be  $ScriptVersion
+
+            Send-AIEvent 'Ping'
+            Flush-AIClient
+            #Now check what has been transmitted 
+            $Capture = Get-FiddlerCapture  
+            #Filter
+            $MyTelemetry = @( $Capture.AllTelemetry | Where name -like "Microsoft.ApplicationInsights.*.Event" ) 
+            $MyTelemetry.Count | Should be 1
+            if ($MyTelemetry.Count -eq 1) { 
+                $MyTelemetry[0].tags.'ai.application.ver' | Should be $ScriptVersion               
+            }
+
 
         }
 
