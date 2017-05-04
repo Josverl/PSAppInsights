@@ -1,4 +1,4 @@
-import-module .\FiddlerTests.psm1
+import-module .\FiddlerTests.psm1 -DisableNameChecking -Force
 
 #init a client and send basic PII information for correlation
 #this incudes the username and the machine name
@@ -10,7 +10,7 @@ Start-FiddlerCapture
 $key = "b437832d-a6b3-4bb4-b237-51308509747d" #AI Powershell-test 
 $Client = New-AIClient -Key $key -AllowPII 
 Send-AIEvent "Allow PII" -Flush
-
+Send-AIEvent "Allow PII" -Flush
 Save-FiddlerCapture -FileName  $fileName 
 $Capture = Read-FiddlerAICapture -FileName  $fileName
 
@@ -18,8 +18,8 @@ $Capture = Read-FiddlerAICapture -FileName  $fileName
 
 "Read {0} Sessions, Containing {1} Telemetryitems" -f $Capture.log.entries.Count, $Capture.AllTelemetry.Count
 
-$AllTelemetry | FT
-
+$Capture.AllTelemetry | Format-Table
+$Capture.log.entries
 Write-host 'Done'
 
 <#

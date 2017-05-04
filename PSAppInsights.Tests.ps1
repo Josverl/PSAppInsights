@@ -67,8 +67,8 @@ Describe "PSAppInsights Module" {
         New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue -Verbose| Should not be $null
     }
     BeforeAll { 
-        #AI Powershell-test 
-        $key = "b437832d-a6b3-4bb4-b237-51308509747d"
+        
+        $key = "b437832d-a6b3-4bb4-b237-51308509747d" #AI Powershell-test 
 
         $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
         $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 

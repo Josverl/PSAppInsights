@@ -118,11 +118,16 @@ Param (
             $Capture.log.Entries[$n] | Add-Member -Name 'AIResponse' -MemberType NoteProperty -Value $AIResponse -Force
         }
 
-        $AllTelemetry = @( $Capture.log| foreach { Write-Output $_.AITelemetry } )
-        $AllResponses = @( $Capture.log| foreach { Write-Output $_.AIResponse } )
+        $AllTelemetry= @( $Capture.log.Entries| foreach { Write-Output $_.AITelemetry } )
+        $AllResponses= @( $Capture.log.Entries| foreach { Write-Output $_.AIResponse } )
 
-        $Capture | Add-Member -Name 'AllTelemetry' -MemberType NoteProperty -Value $AllTelemetry -Force
-        $Capture | Add-Member -Name 'AllResponses' -MemberType NoteProperty -Value $AllResponses -Force
+        $Capture | Add-Member -Name 'AllTelemetry' -MemberType NoteProperty -Value $AllTelemetry
+        $Capture | Add-Member -Name 'AllResponses' -MemberType NoteProperty -Value $AllResponses
+
+
+        #Dynamic don't work so well 
+        #$Capture | Add-Member -Name 'AllTelemetry2' -MemberType ScriptProperty -Value {@( $This.log.Entries| foreach { Write-Output $_.AITelemetry } )}
+        #$Capture | Add-Member -Name 'AllResponses2' -MemberType ScriptProperty -Value {@( $This.log.Entries| foreach { Write-Output $_.AIResponse  } )}
 
         Return  $Capture
     }
