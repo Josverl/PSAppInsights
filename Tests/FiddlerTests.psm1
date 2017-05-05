@@ -207,10 +207,14 @@ Param (
         $Capture | Add-Member -Name 'AllTelemetry' -MemberType NoteProperty -Value $AllTelemetry
         $Capture | Add-Member -Name 'AllResponses' -MemberType NoteProperty -Value $AllResponses
 
+        #Count the errors 
+        $ErrCount = Measure-Object -Sum -InputObject ($Capture.AllResponses | %{ $_.errors.Count})          
+        $Capture | Add-Member -Name 'ErrorCount' -MemberType NoteProperty -Value $ErrCount.Sum
+
         #Dynamic don't work so well 
         #$Capture | Add-Member -Name 'AllTelemetry2' -MemberType ScriptProperty -Value {@( $This.log.Entries| foreach { Write-Output $_.AITelemetry } )}
         #$Capture | Add-Member -Name 'AllResponses2' -MemberType ScriptProperty -Value {@( $This.log.Entries| foreach { Write-Output $_.AIResponse  } )}
-
+        
         Return  $Capture
     }
 }

@@ -34,6 +34,20 @@ if ($TestInstalledModule) {
 
 }
 
+#Common test function 
+Function Filter-Capture {
+Param (
+    $Capture,
+    [string]$Type = 'Event')
+    $Type = $Type.Trim()
+    $MyTelemetry = @( $Capture.AllTelemetry | Where name -like "Microsoft.ApplicationInsights.*.$Type" ) 
+    if ($MyTelemetry.Count -lt $Capture.AllTelemetry.Count ) {
+        Write-warning ('{0} Additional telemetry records were captured' -f ($MyTelemetry.Count - $Capture.AllTelemetry.Count) )
+    }
+    Write-Output $MyTelemetry
+}
+
+
 Describe 'should fail silently if no client is started' {
     BeforeAll {
         Stop-AIClient -WarningAction SilentlyContinue
@@ -63,6 +77,10 @@ Describe 'should fail silently if no client is started' {
        {Send-AIDependency -StopWatch $ST -Name 'Test'  } | Should not throw 
        {Send-AIException -Exception  $ex } | Should not throw 
     }
+    It 'Should not throw errors flushing the default client'  { 
+        {Flush-AIClient } | Should not throw 
+        {Stop-AIClient } | Should not throw 
+    }
 
     It 'Should not throw errors using a Specified client' { 
        {Send-AIEvent -Client $null -Event 'Test'  } | Should not throw 
@@ -71,6 +89,11 @@ Describe 'should fail silently if no client is started' {
        {Send-AIDependency -Client $null -StopWatch $ST -Name 'Test'  } | Should not throw 
        {Send-AIException -Client $null -Exception  $ex } | Should not throw 
     }
+    It 'Should not throw errors flushing  a Specified client' { 
+        {Flush-AIClient -Client $null } | Should not throw 
+        {Stop-AIClient -Client $null } | Should not throw 
+    }
+
 }
 
 Describe "PSAppInsights Module" {
@@ -127,16 +150,18 @@ Describe "PSAppInsights Module" {
             Flush-AIClient
             #Now check what has been transmitted 
             $Capture = Get-FiddlerCapture  
-            $Capture.AllTelemetry.Count | Should be 1
-            if ($Capture.AllTelemetry.Count -eq 1) { 
-                $Capture.AllResponses[0].itemsAccepted | Should be 1
-                $Capture.AllTelemetry[0].tags.'ai.application.ver' | Should be $Version
-                $Capture.AllTelemetry[0].tags.'ai.user.id' | Should be $env:USERNAME
-                $Capture.AllTelemetry[0].tags.'ai.device.id' | Should be $env:COMPUTERNAME 
+            $Capture.ErrorCount | Should be 0
+            #Filter
+            [array]$MyTelemetry = Filter-Capture $Capture -Type 'Event'
+            $MyTelemetry.Count | Should be 1
+            if ($MyTelemetry.Count -eq 1) { 
+                $MyTelemetry[0].tags.'ai.application.ver' | Should be $Version
+                $MyTelemetry[0].tags.'ai.user.id' | Should be $env:USERNAME
+                $MyTelemetry[0].tags.'ai.device.id' | Should be $env:COMPUTERNAME 
 
-                $Capture.AllTelemetry[0].tags.'ai.user.userAgent' | Should be  $Host.Name
+                $MyTelemetry[0].tags.'ai.user.userAgent' | Should be  $Host.Name
 
-                $Capture.AllTelemetry[0].tags.'ai.operation.id' | Should be "PSAppInsights.Tests.ps1"
+                $MyTelemetry[0].tags.'ai.operation.id' -in '<No file>','PSAppInsights.Tests.ps1'  | Should be $true
             }
         }
 
@@ -149,15 +174,15 @@ Describe "PSAppInsights Module" {
             Flush-AIClient
             #Now check what has been transmitted 
             $Capture = Get-FiddlerCapture  
-            $Capture.AllTelemetry.Count | Should be 1
-            if ($Capture.AllTelemetry.Count -eq 1) { 
-                $Capture.AllResponses[0].itemsAccepted | Should be 1
-
-                $Capture.AllTelemetry[0].tags.'ai.device.osVersion'     | Should not be "" #    : 10.0.14393
-                $Capture.AllTelemetry[0].tags.'ai.device.oemName'       | Should not be "" #      : LENOVO
-                $Capture.AllTelemetry[0].tags.'ai.device.model'         | Should not be "" #        : 20FRS02N12
-                $Capture.AllTelemetry[0].tags.'ai.device.type'          | Should not be "" #         : PC
-
+            $Capture.ErrorCount | Should be 0
+            #Filter
+            [array]$MyTelemetry = Filter-Capture $Capture -Type 'Event'
+            $MyTelemetry.Count | Should be 1
+            if ( $MyTelemetry.Count -eq 1) { 
+                $MyTelemetry[0].tags.'ai.device.osVersion'     | Should not be "" #  10.0.14393
+                $MyTelemetry[0].tags.'ai.device.oemName'       | Should not be "" #  LENOVO
+                $MyTelemetry[0].tags.'ai.device.model'         | Should not be "" #  20FRS02N12
+                $MyTelemetry[0].tags.'ai.device.type'          | Should not be "" #  PC
             }            
         }
         it 'can Init  Domain properties' {    
@@ -168,15 +193,14 @@ Describe "PSAppInsights Module" {
             Flush-AIClient
             #Now check what has been transmitted 
             $Capture = Get-FiddlerCapture  
-            $Capture.AllTelemetry.Count | Should be 1
-            if ($Capture.AllTelemetry.Count -eq 1) { 
-                $Capture.AllResponses[0].itemsAccepted | Should be 1
-                
+            $Capture.ErrorCount | Should be 0
+            #Filter
+            [array]$MyTelemetry = Filter-Capture $Capture -Type 'Event'            
+            $Mytelemetry.Count | Should be 1
+
+            if ($Mytelemetry.Count -eq 1) { 
+
                 #TODO Add tests
-                #$Capture.AllTelemetry[0].tags.'ai.device.osVersion'     | Should not be "" #    : 10.0.14393
-                #$Capture.AllTelemetry[0].tags.'ai.device.oemName'       | Should not be "" #      : LENOVO
-                #$Capture.AllTelemetry[0].tags.'ai.device.model'         | Should not be "" #        : 20FRS02N12
-                #$Capture.AllTelemetry[0].tags.'ai.device.type'          | Should not be "" #         : PC
             }                            
         }
         it 'can Init Operation Correlation' {    
@@ -201,13 +225,12 @@ Describe "PSAppInsights Module" {
             #Now check what has been transmitted 
             $Capture = Get-FiddlerCapture  
             #Filter
-            $MyTelemetry = @( $Capture.AllTelemetry | Where name -like "Microsoft.ApplicationInsights.*.Event" ) 
+            [array]$MyTelemetry = Filter-Capture $Capture -Type 'Event'
+
             $MyTelemetry.Count | Should be 1
             if ($MyTelemetry.Count -eq 1) { 
                 $MyTelemetry[0].tags.'ai.application.ver' | Should be $ScriptVersion               
             }
-
-
         }
 
         it 'can log permon counters in developer mode' {
