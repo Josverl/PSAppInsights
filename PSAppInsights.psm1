@@ -292,7 +292,7 @@ function New-AIClient
 <#
 .Synopsis
     Flush the Application Insights Queue to the AI Service
-    Forces the sendign of any remaining messages in the send queueu
+    Forces the sending of any remaining messages in the send queue
 #>
 function Push-AIClient
 {
@@ -304,9 +304,20 @@ function Push-AIClient
     (
         #The AppInsights Telemetry client object to use (Default from singleton).
         [Parameter(Mandatory=$false)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client 
     )
-    $client.Flush()
+    #Check for a specified AI client
+    if ($Client -eq $null) {
+        If ( ($Global:AISingleton ) -AND ( $Global:AISingleton.Client ) ) {
+            #Use Current Client
+            $Client = $Global:AISingleton.Client
+        }
+    }
+    if ($Client) { 
+        $client.Flush()
+    } else {
+        Write-Verbose 'No Client initialised'
+    }
 }
 
 <#
