@@ -7,7 +7,7 @@
 @{
     # Script module associated with this manifest.
     RootModule = 'PSAppInsights'
-    ModuleVersion = '0.9.3'
+    ModuleVersion = '0.9.4'
 
     # ID used to uniquely identify this module
     GUID = '1706beeb-bb2f-4a51-b1fd-f972e62f4d2d'
@@ -91,6 +91,7 @@
 
             # ReleaseNotes of this module
         ReleaseNotes = @"
+v0.9.4   Improved errorhandling and reporting during client initialisation            
 V0.9.2.3 Silently fail if client has not been initialised, to allow adding  SEND-AI* statements withouth the need to remove them to avoid dependencies
 V0.9.2   Improve Stacklogging, Send-AIException, 
 v0.9.1   Add -Stackwalk to allow Wrapping of a Log function and still allow correct reporting of the calling function -StackWalk 1 

@@ -134,21 +134,32 @@ function New-AIClient
             #----------------------
             #Add domain initialiser to add domain and machine info 
             if ($Initializer.Contains('Domain')) {
-                Write-Verbose "Add initializer- domain and machine info" 
-                $DomInit = [Microsoft.ApplicationInsights.WindowsServer.DomainNameRoleInstanceTelemetryInitializer]::new()
-                $Global:AISingleton.Configuration.TelemetryInitializers.Add($DomInit)
+                Try { 
+                    Write-Verbose "Add initializer- domain and machine info" 
+                    $DomInit = [Microsoft.ApplicationInsights.WindowsServer.DomainNameRoleInstanceTelemetryInitializer]::new()
+                    $Global:AISingleton.Configuration.TelemetryInitializers.Add($DomInit)
+                } catch { 
+                    #Warn but do not abort
+                    Write-Warning "Could not add the Domain initialiser"
+                }
             }
             #Add device initialiser to add client info 
             if ($Initializer.Contains('Device')) {
+                
                 #If on AzureAutomation, just report Azure automation
                 If ($false) {
                     Write-Verbose "TODO Add Azure Automation- device info"
                     
                 }else {
+                    Try { 
+                        Write-Verbose "Add initializer- device info"
+                        $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
+                        $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
+                    } catch { 
+                        #Warn but do not abort
+                        Write-Warning "Could not add the Device initialiser"
+                    }
 
-                    Write-Verbose "Add initializer- device info"
-                    $DeviceInit = [Microsoft.ApplicationInsights.WindowsServer.DeviceTelemetryInitializer]::new()
-                    $Global:AISingleton.Configuration.TelemetryInitializers.Add($DeviceInit)
                 }
             }
             #----------------------
@@ -160,18 +171,29 @@ function New-AIClient
             # do not set any property that has already been set by an initializer
 
             if ($Initializer.Contains('Operation')) {
-                Write-Verbose "Add initializer- operation correlation" 
-                $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
-                $Global:AISingleton.Configuration.TelemetryInitializers.Add($OpInit)
+                Try { 
+                    Write-Verbose "Add initializer- operation correlation" 
+                    $OpInit = [Microsoft.ApplicationInsights.Extensibility.OperationCorrelationTelemetryInitializer]::new()
+                    $Global:AISingleton.Configuration.TelemetryInitializers.Add($OpInit)
+                } catch { 
+                    #Warn but do not abort
+                    Write-Warning "Could not add the Operation initialiser"
+                }
             }
 
 
             #Add dependency collector to (automatically ?) measure dependencies 
             if ($Initializer.Contains('Dependency')) {
-                Write-Verbose "Add initializer- dependency collector"
-                $Dependency = [Microsoft.ApplicationInsights.DependencyCollector.DependencyTrackingTelemetryModule]::new();
-                $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
-                $TelemetryModules.Modules.Add($Dependency);
+                Try { 
+                    Write-Verbose "Add initializer- dependency collector"
+                    $Dependency = [Microsoft.ApplicationInsights.DependencyCollector.DependencyTrackingTelemetryModule]::new();
+                    $TelemetryModules = [Microsoft.ApplicationInsights.Extensibility.Implementation.TelemetryModules]::Instance;
+                    $TelemetryModules.Modules.Add($Dependency);
+                } catch { 
+                    #Warn but do not abort
+                    Write-Warning "Could not add the Dependency initialiser"
+                }
+
             }
 
             # Send any unhandled exceptions
@@ -189,8 +211,12 @@ function New-AIClient
                 $Global:AISingleton.Configuration.TelemetryInitializers | 
                     Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
                     ForEach-Object { 
-                        $_.Initialize($Global:AISingleton.Configuration); 
-                        Write-Verbose ".."
+                        Try { 
+                            $_.Initialize($Global:AISingleton.Configuration); 
+                            Write-Verbose ".."
+                        } catch { 
+                            Write-Warning 'Error during initialisation  of Telemetry Module'
+                        }
                     }
             }
             #Then the telemetry processors 
@@ -199,8 +225,12 @@ function New-AIClient
 		        $Global:AISingleton.Configuration.TelemetryProcessorChain.TelemetryProcessors |
                     Where-Object {$_ -is 'Microsoft.ApplicationInsights.Extensibility.ITelemetryModule'} |
                     ForEach-Object { 
-                        $_.Initialize($Global:AISingleton.Configuration); 
-                        Write-Verbose ".."
+                        Try { 
+                            $_.Initialize($Global:AISingleton.Configuration); 
+                            Write-Verbose ".."
+                        } catch { 
+                            Write-Warning 'Error during initialisation  of Telemetry Module'
+                        } 
                     }
             } 
             #Now get the initialised modules 
