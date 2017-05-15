@@ -107,7 +107,7 @@ function Send-AIDependency
         } catch { 
             #Resultcode is apperantly removed from AI 2.3.0
             If ($ResultCode -ne 200) {
-                Write-Warning "Resultcode cannot be reported in AI 2.3.0"
+                Write-Warning "Resultcode cannot be reported"
             }
         } 
         $TelDependency.Success = $Success
