@@ -28,11 +28,11 @@ Param (
     #The AI Application ID (not the iKey)        
     [string]$applicationId,
     #An API Key to th AI Application 
-    [securestring]$APIKey,
+    [string]$APIKey,
     #The body with the AI Annotation detals
     [string]$bodyJson
 )	
-
+    #Initialize 
     $retries = 1
     $success = $false
 
@@ -45,60 +45,53 @@ Param (
         Throw "Failed to find the redirect link to create a release annotation"
     } # Or just assume : "https://aigs1.aisvc.visualstudio.com"
 
-
+    #Process
     while (!$success -and $retries -lt 6) {
 
         $location = "$AIServiceUrl/applications/$applicationId/Annotations?api-version=2015-11"
-        Write-Verbose "Create Annotation using : $location" -Verbose
+        Write-Verbose "Create Annotation using : $location" 
 
-        $Local:createResultStatus = $null
-        $Local:createResultStatusDescription = $null
-        $Local:result = $null
+        $ErrorStatus = $null
+        $ErrorStatusDescription = $null
+        $result = $null
 		#try to create the Annotation 
         try {
             $result = Invoke-WebRequest -Uri $location -Method Put -Body $bodyJson -Headers $headers `
 										-ContentType "application/json; charset=utf-8" -UseBasicParsing
         } catch {
-            #if an error occurred, capture the cause 
-			if ($_.Exception) {
-               
-				if ($_.Exception.Response) {
-                    $ResultStatus = $_.Exception.Response.StatusCode.value__
-                    $ResultStatusDescription = $_.Exception.Response.StatusDescription
-                }
-                else {
-                    $ResultStatus = "Exception"
-                    $ResultStatusDescription = $_.Exception.Message
-                }
+            #Construct error message 
+            if ($_.Exception.Response) {
+
+                $ErrorStatus = $_.Exception.Response.StatusCode.value__
+                $ErrorStatusDescription = $_.Exception.Response.StatusDescription
             }
+            else {
+                $ErrorStatus = "Exception"
+                $ErrorStatusDescription = $_.Exception.Message
+            }            
+            $Message = "Failed to create an annotation. Error {1}, Description: {2}." -f  $Result, $ResultDescription
+            Throw $Message
         }
 
-        if ($result)  {
-			#Success 
-            $success = $true			         
+        if ($result.StatusCode -eq 200)  {
+			#Response indicates Success 
+            $success = $true
+            return $result
+            break   
         }
-		else {
-			#call was not succesfull, make sure there is a status to report  
-            if ($ResultStatus -eq $null) {
-                $ResultStatus = "Unknown"
-            }
-            if ($ResultStatusDescription -eq $null) {
-                $ResultStatusDescription = "Unknown"
-            }
-
-			#Check if the error was a permanent error type based on the result code, 
-			# # and break out of the waitloop when : conflict or unauthorized or not found 
-			if ($ResultStatus -eq 409 -or $ResultStatus -eq 404 -or $ResultStatus -eq 401) { 
-				break
-			}
-			#Wait some time and try once more 
-			$retries = $retries + 1
-            Write-Verbose "waiting to retry: $retries" -Verbose            
-			Start-Sleep -Milliseconds 500
-        }
+		#Check if the error was a permanent error type based on the result code, 
+	    # and break out of the waitloop when : conflict or unauthorized or not found 
+        if ($result.StatusCode -in 409,404,401) {
+            $Message = "Failed to create an annotation. Error {1}, Description: {2}." -f  $Result.StatusCode, $Result.StatusDescription
+            Throw $Message
+        }   
+        $retries = $retries + 1
+        Write-Verbose "waiting to retry: $retries"            
+        Start-Sleep -Milliseconds 500
     }
-    #Return array of resutls, caller must expext this  
-    return $ResultStatus, $ResultStatusDescription
+    #After 6 tries , stop trying
+    $Message = "Timeout while attempting to create an annotation. LastError {1}, Description: {2}." -f  $Result.StatusCode, $Result.StatusDescription
+    throw $Message
 }
 
 
@@ -122,20 +115,13 @@ Function CreateReleaseAnnotation {
         #The Annotation's category, default = 'Deployment'
         [string]$Category = 'Deployment'
     )
-    $Now = Get-Date
-    $annotationDate = $Now.ToString("MMddyyyy_HHmmss") 
-
     #Input validation 
     # input must be between NOW and 90 days back maximum
+    $Now = Get-Date
     if ($eventDateTime -lt $Now.AddDays(-90) -Or $eventDateTime -gt $Now) {
         throw 'eventDateTime value must be between NOW and 90 days back maximum'
     }
 
-    #$currentTime = (Get-Date).ToUniversalTime()
-    #$annotationDate = $currentTime.ToString("MMddyyyy_HHmmss")
-    #set-variable -Name requestBody -Force -Scope Script
-
-    #No Splatting yet ...
     #Start with an empty hashtable
     $requestBody = @{}
     $requestBody.Id             = [GUID]::NewGuid()
@@ -145,21 +131,17 @@ Function CreateReleaseAnnotation {
 
     #Add release name to any passed in properties
     $releaseProperties.Add("ReleaseName", $releaseName)
-    $requestBody.Properties     = ConvertTo-Json($releaseProperties) -Compress      #to json for nesting ( one way to do this) 
+    $requestBody.Properties     = ConvertTo-Json($releaseProperties) -Compress      #to json for nesting
     $requestBody.RelatedAnnotation=$null
-
-    $bodyJson = $requestBody | ConvertTo-Json
-
+    #Convert the information to a json document 
+    $bodyJson = $requestBody | ConvertTo-Json -Compress                             #includes nested json 
 
     $Result = $null
-    $ResultDescription = ""
-    
-    $Result, $ResultDescription = CreateAnnotation -applicationId $applicationId -bodyJson $bodyJson -APIKey $apiKey
+  
+    $Result = createAnnotation -applicationId $applicationId -bodyJson $bodyJson -APIKey $apiKey
     if ($Result) {
-        $output = "Failed to create an annotation with Id: {0}. Error {1}, Description: {2}." -f $requestBody.Id, $Result, $ResultDescription
-        throw $output
+        $ReleaseInfo = $result.Content | Convertfrom-json
+        $Message = "Release annotation created. Id: {0}." -f $requestBody.Id
+        Write-Verbose $Message
     }
-
-    $str = "Release annotation created. Id: {0}." -f $requestBody.Id
-    Write-Host $str
 } 
