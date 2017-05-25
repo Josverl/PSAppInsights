@@ -1,6 +1,13 @@
 # Sample usage .\CreateReleaseAnnotation.ps1 -applicationId "<appId>" -apiKey "<apiKey>" -releaseName "<releaseName>" -releaseProperties @{"ReleaseDescription"="Release with annotation";"TriggerBy"="John Doe"} -eventDateTime "2016-07-07T06:23:44"
 
+
 #Requires -version 3
+
+#Suppress warning for select 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', 'Select')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', 'ogv')]
+
+param()
 
 function GetRequestUrlFromFwLink($fwLink) {
     # background info on how fwlink works: After you submit a web request, many sites redirect through a series of intermediate pages before you finally land on the destination page.
@@ -34,7 +41,6 @@ Param (
 )	
     #Initialize 
     $retries = 1
-    $success = $false
 
     #Send the APIKey in the header for the webrequest 
     $headers= @{ "X-AIAPIKEY" = $apiKey}
@@ -46,7 +52,7 @@ Param (
     } # Or just assume : "https://aigs1.aisvc.visualstudio.com"
 
     #Process
-    while (!$success -and $retries -lt 6) {
+    while ($retries -lt 6) {
 
         $location = "$AIServiceUrl/applications/$applicationId/Annotations?api-version=2015-11"
         Write-Verbose "Create Annotation using : $location" 
@@ -58,10 +64,12 @@ Param (
         try {
             $result = Invoke-WebRequest -Uri $location -Method Put -Body $bodyJson -Headers $headers `
 										-ContentType "application/json; charset=utf-8" -UseBasicParsing
+            if ($result.StatusCode -eq 200)  {
+                return $result
+            }
         } catch {
             #Construct error message 
             if ($_.Exception.Response) {
-
                 $ErrorStatus = $_.Exception.Response.StatusCode.value__
                 $ErrorStatusDescription = $_.Exception.Response.StatusDescription
             }
@@ -69,16 +77,10 @@ Param (
                 $ErrorStatus = "Exception"
                 $ErrorStatusDescription = $_.Exception.Message
             }            
-            $Message = "Failed to create an annotation. Error {1}, Description: {2}." -f  $Result, $ResultDescription
+            $Message = "Failed to create an annotation. Error {0}, Description: {1}." -f  $Result, $ResultDescription
             Throw $Message
         }
 
-        if ($result.StatusCode -eq 200)  {
-			#Response indicates Success 
-            $success = $true
-            return $result
-            break   
-        }
 		#Check if the error was a permanent error type based on the result code, 
 	    # and break out of the waitloop when : conflict or unauthorized or not found 
         if ($result.StatusCode -in 409,404,401) {
@@ -94,13 +96,13 @@ Param (
     throw $Message
 }
 
-
 Function CreateReleaseAnnotation { 
     param(
         [parameter(Mandatory = $true)]
 		[string]$applicationId,
         [parameter(Mandatory = $true)]
 		[string]$apiKey,
+
 
         [parameter(Mandatory = $true)]
 		[string]$releaseName,
@@ -112,8 +114,16 @@ Function CreateReleaseAnnotation {
         [parameter(Mandatory = $false)]
 		[DateTime]$eventDateTime = (Get-Date ),
 
+        #A GUID to identifiy the annotation, default = new-guid
+        [GUID]$AnnotationID = [GUID]::NewGuid(),
+
+        #A GUID to identifiy a related annotation, default = Null;
+        [System.Nullable``1[[System.GUID]]] #Nullable GUID
+        $RelatedAnnotationID  , 
         #The Annotation's category, default = 'Deployment'
-        [string]$Category = 'Deployment'
+        [string]$Category = 'Deployment',
+        #Return the Annotation details that were sent
+        [switch]$PassThrough
     )
     #Input validation 
     # input must be between NOW and 90 days back maximum
@@ -124,24 +134,29 @@ Function CreateReleaseAnnotation {
 
     #Start with an empty hashtable
     $requestBody = @{}
-    $requestBody.Id             = [GUID]::NewGuid()
+    $requestBody.Id             = $AnnotationID
     $requestBody.AnnotationName = $releaseName
     $requestBody.EventTime      = $eventDateTime.ToString("s")
     $requestBody.Category       = $Category
-
+    $requestBody.RelatedAnnotation=$RelatedAnnotationID
     #Add release name to any passed in properties
     $releaseProperties.Add("ReleaseName", $releaseName)
-    $requestBody.Properties     = ConvertTo-Json($releaseProperties) -Compress      #to json for nesting
-    $requestBody.RelatedAnnotation=$null
-    #Convert the information to a json document 
-    $bodyJson = $requestBody | ConvertTo-Json -Compress                             #includes nested json 
-
-    $Result = $null
+    $requestBody.Properties     = Convertto-json -InputObject $releaseProperties -Compress 
+    #Note : This results in a non standard JSON document , but this is apparently the required structure which the service accepts 
+    
+    #Convert the information to a json document, with one of the attributes containing a seperate JSON document
+    $bodyJson = $requestBody | ConvertTo-Json -Compress    
   
     $Result = createAnnotation -applicationId $applicationId -bodyJson $bodyJson -APIKey $apiKey
     if ($Result) {
-        $ReleaseInfo = $result.Content | Convertfrom-json
+        #Suppress warning
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+      $ReleaseInfo = $result.Content | Convertfrom-json | Select -First 1
         $Message = "Release annotation created. Id: {0}." -f $requestBody.Id
         Write-Verbose $Message
+    }
+    if ($PassThrough) {
+        #And return the constructed 
+        Return $requestBody
     }
 } 
