@@ -7,6 +7,8 @@
 .AUTHOR Jos Verlinde
 .GUID bcff6b0e-509e-4c9d-af31-dccc41e148d0
 #>
+#Suppress wanrings about variables not being used for this file 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 Param ( 
     #switch to test the installed module after initial test deployment  
     [switch]$TestInstalledModule
@@ -35,7 +37,7 @@ if ($TestInstalledModule) {
 }
 
 #Common test function 
-Function Filter-Capture {
+Function FilterCapture {
 Param (
     $Capture,
     [string]$Type = 'Event')
@@ -58,7 +60,7 @@ Describe 'should fail silently if no client is started' {
         $ex = new-object System.Management.Automation.ApplicationFailedException
         try  
         {  
-            $fileContent = Get-Content -Path "C:\Does.not.exists.txt" -ErrorAction Stop  
+            $fileContent = Get-Content -Path "C:\Does.not.exists.txt" -ErrorAction Stop  
         }  
         catch  
         {  
@@ -106,7 +108,7 @@ Describe "PSAppInsights Module" {
 
 
     BeforeAll { 
-        
+       
         $key = "b437832d-a6b3-4bb4-b237-51308509747d" #AI Powershell-test 
 
         $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
@@ -169,7 +171,7 @@ Describe "PSAppInsights Module" {
             $Capture = Get-FiddlerCapture  
             $Capture.ErrorCount | Should be 0
             #Filter
-            [array]$MyTelemetry = Filter-Capture $Capture -Type 'Event'
+            [array]$MyTelemetry = FilterCapture $Capture -Type 'Event'
             $MyTelemetry.Count | Should be 1
             if ($MyTelemetry.Count -eq 1) { 
                 $MyTelemetry[0].tags.'ai.application.ver' | Should be $Version
@@ -193,7 +195,7 @@ Describe "PSAppInsights Module" {
             $Capture = Get-FiddlerCapture  
             $Capture.ErrorCount | Should be 0
             #Filter
-            [array]$MyTelemetry = Filter-Capture $Capture -Type 'Event'
+            [array]$MyTelemetry = FilterCapture $Capture -Type 'Event'
             $MyTelemetry.Count | Should be 1
             if ( $MyTelemetry.Count -eq 1) { 
                 $MyTelemetry[0].tags.'ai.device.osVersion'     | Should not be "" #  10.0.14393
@@ -212,7 +214,7 @@ Describe "PSAppInsights Module" {
             $Capture = Get-FiddlerCapture  
             $Capture.ErrorCount | Should be 0
             #Filter
-            [array]$MyTelemetry = Filter-Capture $Capture -Type 'Event'            
+            [array]$MyTelemetry = FilterCapture $Capture -Type 'Event'            
             $Mytelemetry.Count | Should be 1
 
             if ($Mytelemetry.Count -eq 1) { 
@@ -242,7 +244,7 @@ Describe "PSAppInsights Module" {
             #Now check what has been transmitted 
             $Capture = Get-FiddlerCapture  
             #Filter
-            [array]$MyTelemetry = Filter-Capture $Capture -Type 'Event'
+            [array]$MyTelemetry = FilterCapture $Capture -Type 'Event'
 
             $MyTelemetry.Count | Should be 1
             if ($MyTelemetry.Count -eq 1) { 

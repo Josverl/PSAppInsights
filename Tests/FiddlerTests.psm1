@@ -207,8 +207,8 @@ Param (
         $Capture | Add-Member -Name 'AllTelemetry' -MemberType NoteProperty -Value $AllTelemetry
         $Capture | Add-Member -Name 'AllResponses' -MemberType NoteProperty -Value $AllResponses
 
-        #Count the errors 
-        $ErrCount = Measure-Object -Sum -InputObject ($Capture.AllResponses | %{ $_.errors.Count})          
+        #Count the errors $counts = $Capture.AllResponses | %{ $_.errors.Count}
+        $ErrCount = Measure-Object -Sum -InputObject ($Capture.AllResponses | %{ if ($_.errors -and $_.errors.Count ){ $_.errors.Count} } )          
         $Capture | Add-Member -Name 'ErrorCount' -MemberType NoteProperty -Value $ErrCount.Sum
 
         #Dynamic don't work so well 
