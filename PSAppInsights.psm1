@@ -81,7 +81,7 @@ function New-AIClient
         #Find a sensible toplevel Operation ID
             #Get the topmost caller's information
             $TopInfo = getCallerInfo -level (Get-PSCallStack).Length
-            if     ($TopInfo.Script)                           { $OperationID = $TopInfo.Script } 
+            if     ($TopInfo.Script)                      { $OperationID = $TopInfo.Script } 
             else { 
                 if ($TopInfo.Command -ne '<ScriptBlock>') { $OperationID = $TopInfo.Command } 
                 else { 

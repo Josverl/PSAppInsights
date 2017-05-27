@@ -40,7 +40,7 @@ Param (
     $Capture,
     [string]$Type = 'Event')
     $Type = $Type.Trim()
-    $MyTelemetry = @( $Capture.AllTelemetry | Where name -like "Microsoft.ApplicationInsights.*.$Type" ) 
+    $MyTelemetry = @( $Capture.AllTelemetry | Where-Object name -like "Microsoft.ApplicationInsights.*.$Type" ) 
     if ($MyTelemetry.Count -lt $Capture.AllTelemetry.Count ) {
         Write-warning ('{0} Additional telemetry records were captured' -f ($MyTelemetry.Count - $Capture.AllTelemetry.Count) )
     }
@@ -97,9 +97,14 @@ Describe 'should fail silently if no client is started' {
 }
 
 Describe "PSAppInsights Module" {
-    It "loads the AI Dll" {
+    It "loads the AI Dll"  -Pending {
         New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue -Verbose| Should not be $null
+        #Use Get-modules  to list all loaded DLLs and check for the expected ones 
     }
+
+
+
+
     BeforeAll { 
         
         $key = "b437832d-a6b3-4bb4-b237-51308509747d" #AI Powershell-test 
@@ -128,6 +133,18 @@ Describe "PSAppInsights Module" {
         AfterEach {
             Stop-FiddlerCapture
         }
+
+
+        it 'detects an invalid iKey' -Pending { 
+            # Start 
+            # send 
+            # Stop 
+
+            #Check using fiddler 
+            #{"itemsReceived":1,"itemsAccepted":0,"errors":[{"index":0,"statusCode":400,"message":"Invalid instrumentation key"}]}
+        }
+
+
 
         It 'can Init a new log AllowPII session' {
             $Version = "2.3.4"
@@ -161,7 +178,7 @@ Describe "PSAppInsights Module" {
 
                 $MyTelemetry[0].tags.'ai.user.userAgent' | Should be  $Host.Name
 
-                $MyTelemetry[0].tags.'ai.operation.id' -in '<No file>','PSAppInsights.Tests.ps1'  | Should be $true
+                $MyTelemetry[0].tags.'ai.operation.id' -in '<No file>','PSAppInsights.Tests.ps1','Pester.psm1'  | Should be $true
             }
         }
 

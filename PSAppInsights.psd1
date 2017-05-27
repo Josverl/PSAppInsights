@@ -7,7 +7,7 @@
 @{
     # Script module associated with this manifest.
     RootModule = 'PSAppInsights'
-    ModuleVersion = '0.9.4'
+    ModuleVersion = '0.9.5'
 
     # ID used to uniquely identify this module
     GUID = '1706beeb-bb2f-4a51-b1fd-f972e62f4d2d'
@@ -37,6 +37,7 @@
         # Tracking of dependencies 
         '.\Microsoft.ApplicationInsights.DependencyCollector.2.3.0\lib\net45\Microsoft.AI.DependencyCollector.dll',
         '.\Microsoft.ApplicationInsights.Agent.Intercept.2.0.7\lib\net45\Microsoft.AI.Agent.Intercept.dll',
+
         #And the additional powershell modules
         # Send Base event types 
         '.\AIEvent.psm1',
@@ -91,6 +92,7 @@
 
             # ReleaseNotes of this module
         ReleaseNotes = @"
+v0.9.5   Detect version of ps1 scripts running in Azure Automation 
 v0.9.4   Improved errorhandling and reporting during client initialisation            
 V0.9.2.3 Silently fail if client has not been initialised, to allow adding  SEND-AI* statements withouth the need to remove them to avoid dependencies
 V0.9.2   Improve Stacklogging, Send-AIException, 

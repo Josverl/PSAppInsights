@@ -62,32 +62,44 @@ Param
 )
 
 #TODO : Verify Implementation : http://apmtips.com/blog/2017/02/13/enable-application-insights-live-metrics-from-code/
+#TODO Add options for DisableFullTelemetryItems DisableTopCpuProcesses ?
 
-    #Make sure a Key is set if one is provided
-    if ( [string]::IsNullOrEmpty($key) -eq $false) {
-        Write-verbose 'Start-AILiveMetrics - Save IKey'
-        # This is a singleton that controls all New AI Client sessions for this process from this moment 
-        [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
-    }
+    Try { 
+        #Make sure a Key is set if one is provided
+        if ( [string]::IsNullOrEmpty($key) -eq $false) {
+            Write-verbose 'Start-AILiveMetrics - Save IKey'
+            # This is a singleton that controls all New AI Client sessions for this process from this moment 
+            [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey = $key
+        }
 
-    #Check for a specified AI client
-    if ([Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey -eq $null) {
-        throw [System.Management.Automation.PSArgumentNullException]::new($Global:AISingleton.ErrNoClient)
-    }
+        #Check for a specified AI client
+        if ([Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active.InstrumentationKey -eq $null) {
+            throw [System.Management.Automation.PSArgumentNullException]::new($Global:AISingleton.ErrNoClient)
+        }
 
-    #If one is running : Close it 
-    if ($Global:AISingleton.QuickPulse) {
-        Write-verbose "Start-AILiveMetrics - Stop and replace existing Live Metrics"
-        Stop-AIQuickPulse
-    }
+        #If one is running : Close it 
+        if ($Global:AISingleton.QuickPulse) {
+            Write-verbose "Start-AILiveMetrics - Stop and replace existing Live Metrics"
+            Stop-AIQuickPulse
+        }
     
-    #Create a new QuickPulse / LiveMetric Processor
-    $Global:AISingleton.QuickPulse = [Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse.QuickPulseTelemetryModule]::new()
+        #Create a new QuickPulse / LiveMetric Processor
+        $Global:AISingleton.QuickPulse = [Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.QuickPulse.QuickPulseTelemetryModule]::new()
 
-    #Copy the settings 
-    # $Global:AISingleton.QuickPulse.DisableFullTelemetryItems = $DisableFullTelemetryItems
-     Write-verbose "Start-AILiveMetrics - Initialize"
-    $Global:AISingleton.QuickPulse.Initialize( [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active )
+        #Copy the settings 
+        # $Global:AISingleton.QuickPulse.DisableFullTelemetryItems = $DisableFullTelemetryItems
+         Write-verbose "Start-AILiveMetrics - Initialize"
+        $Global:AISingleton.QuickPulse.Initialize( [Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration]::Active )
+
+<#        void Initialize(
+                Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration, 
+                Microsoft.ApplicationInsights, Version=2.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 configuration)
+        void ITelemetryModule.Initialize(Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration, Microsoft.ApplicationInsights, Version=2.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 configuration)
+#>
+    } catch { 
+        $ex = $_ 
+        Write-Warning "Could not initialise AI Live Metrics"
+    }
 }
 
 <#

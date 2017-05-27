@@ -11,6 +11,23 @@ $key = "b437832d-a6b3-4bb4-b237-51308509747d"
 #this includes identifiers hashed(username) and hashed(machine name)  
 $Client = New-AIClient -Key $key -Verbose -Fiddler -Initializer Dependency
 
-Send-AIEvent "Basic Hashed non-PII information" -Flush
 
-Throw "Error"
+
+
+
+
+#Create an Exception and error to log 
+    $exception = new-object System.Management.Automation.ApplicationFailedException
+    try  
+    {  
+            $fileContent = Get-Content -Path "C:\Does.not.exists.txt" -ErrorAction Stop  
+    }  
+    catch  
+    {  
+        $MyError = $_     
+        $MyExeption = $_.Exception
+
+        Send-AIException -Error $MyError
+        Send-AIException -Exception $MyExeption
+    }
+

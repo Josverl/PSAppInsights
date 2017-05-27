@@ -101,9 +101,9 @@ param(
     } catch { return $null}
 }
 
-
 <#
     Helper function to get the calling script or module version
+    checks Script, Invocation Info, Module and Folder names
 #>
 function getCallerVersion 
 {
@@ -112,8 +112,10 @@ param(
     #Get version from X levels up in the call stack
     [int]$level = 2 #Use 2 as default as this is mostly an internal function
 )
+
     #Get the caller info
     $Stack = Get-PSCallStack
+    
     #The level to track back should not exceed the depth of the callstack, so limit it where needed 
     $level = [Math]::Min( $level, $Stack.Length -1 )
     Write-Verbose "getCallerVersion -level $level"
@@ -122,33 +124,62 @@ param(
     try { 
         #Get the caller info
         $caller = $Stack[$level] 
+
         #if script
         if ( -NOT [string]::IsNullOrEmpty( $caller.ScriptName)){
+            Write-Verbose "Try Test-ScriptFileInfo -Path $($caller.ScriptName)"
             $info = Test-ScriptFileInfo -Path $caller.ScriptName -ErrorAction SilentlyContinue
             if ( $info ) {
                 $CallerVersion = $info.Version
                 Write-Verbose "getCallerVersion found script version $CallerVersion"
                 return $CallerVersion
             }
-        }       
-    } catch { }
+        } 
+              
+    } catch { 
+        Write-Verbose 'catch error during script test' 
+    } 
     Try {
-        #try module info based on the name, but with a psd1 extention
+        if (-NOT [string]::IsNullOrEmpty(  $Caller.InvocationInfo.MyCommand)){
+            Write-Verbose "Try to extract version info from Stack[x].InvocationInfo.MyCommand "
+            
+            #define Regex to look for version 
+            $rxGetVersion = [regex]'\.VERSION\s+(?<Version>[\d\.]+)'
+
+            if ($Caller.InvocationInfo.MyCommand.ToString() -match $rxGetVersion ) {
+                #version is a named capture block 
+                $CallerVersion =  $Matches['Version']
+
+                Write-Verbose "getCallerVersion found InvocationInfo.MyCommand version $CallerVersion"
+                return $CallerVersion
+            }
+        }
+     } catch { 
+        Write-Verbose 'catch error during InvocationInfo test' 
+    } 
+    Try {
+        
         $Filename = [System.IO.Path]::ChangeExtension( $caller.ScriptName, 'psd1')
+        Write-Verbose "Try Test-ModuleManifest -Path $Filename"
         $info = Test-ModuleManifest -Path $Filename -ErrorAction SilentlyContinue
         if ( $info ) {
             $CallerVersion = $info.Version
             Write-Verbose "getCallerVersion found Module version $CallerVersion"
             return $CallerVersion
         }
-    } catch {} # Continue 
+    } catch { 
+        Write-Verbose 'catch error during module test' 
+    } 
 
     try {
-        #try to find a version from the path and folder names 
+        Write-Verbose "try to find a version from the path and folder names"
         $Folders= @( $Filename.Split('\') )
         $found = $false
         foreach( $f in $Folders ) {
-            Try { $CallerVersion = [version]$f ; $found = $true} 
+            Try { 
+                Write-Verbose "evaluating Path fragment [$f]"
+                $CallerVersion = [version]$f ; $found = $true
+            } 
             catch {}
         }
         if ($found) {
@@ -163,7 +194,6 @@ param(
     Write-Verbose "no version found"
     return $CallerVersion
 }
-
 
 <#
  # Credits: Joel Bennet
