@@ -110,7 +110,7 @@ function getCallerVersion
 [CmdletBinding()]
 param(
     #Get version from X levels up in the call stack
-    [int]$level = 2 #Use 2 as default as this is mostly an internal function
+    [int]$level = 2 #Use 2 as default as this is mostly an internal function, so we need to reach one additional Stacklevel up 
 )
 
     #Get the caller info
@@ -124,7 +124,7 @@ param(
     try { 
         #Get the caller info
         $caller = $Stack[$level] 
-
+        
         #if script
         if ( -NOT [string]::IsNullOrEmpty( $caller.ScriptName)){
             Write-Verbose "Try Test-ScriptFileInfo -Path $($caller.ScriptName)"
@@ -134,7 +134,9 @@ param(
                 Write-Verbose "getCallerVersion found script version $CallerVersion"
                 return $CallerVersion
             }
-        } 
+        } else {
+            Write-Debug 'No scriptname'
+        }
               
     } catch { 
         Write-Verbose 'catch error during script test' 
@@ -142,7 +144,6 @@ param(
     Try {
         if (-NOT [string]::IsNullOrEmpty(  $Caller.InvocationInfo.MyCommand)){
             Write-Verbose "Try to extract version info from Stack[x].InvocationInfo.MyCommand "
-            
             #define Regex to look for version 
             $rxGetVersion = [regex]'\.VERSION\s+(?<Version>[\d\.]+)'
 
@@ -153,7 +154,22 @@ param(
                 Write-Verbose "getCallerVersion found InvocationInfo.MyCommand version $CallerVersion"
                 return $CallerVersion
             }
+        } else {
+            #convert to json
+            $InvocationJSON = $Caller.InvocationInfo | ConvertTo-Json 
+            Write-Verbose "Try to extract version info from Stack[x].InvocationInfo"
+            #define Regex to look for version 
+            $rxGetVersion = [regex]'\.VERSION\s+(?<Version>[\d\.]+)'
+
+            if ($InvocationJSON -match $rxGetVersion ) {
+                #version is a named capture block 
+                $CallerVersion =  $Matches['Version']
+
+                Write-Verbose "getCallerVersion found InvocationInfo version $CallerVersion"
+                return $CallerVersion
+            }
         }
+
      } catch { 
         Write-Verbose 'catch error during InvocationInfo test' 
     } 
