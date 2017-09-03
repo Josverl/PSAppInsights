@@ -30,13 +30,11 @@
     TimeThis -Last
 
 .EXAMPLE
-
     TimeThis "Start Demo" 
     Start-Sleep 1 
     TimeThis  "{4}`t Custom Format" -Format None
     Start-Sleep 1
     TimeThis -Last
-
 
 .NOTES
     todo: PassThrough
@@ -51,7 +49,7 @@ function TimeThis
     Param (
         #Identifier for the next aactivity or commands that should be measured        
         [Parameter(Position=0,ParameterSetName="Activity")]
-        $Action = "Activity:`t{3}",
+        $Activity = "Activity:`t{3}",
 
         #Specify to indicate the first activity, Overrides the current running timer if any.
         [Parameter(ParameterSetName="Activity")]
@@ -70,48 +68,51 @@ function TimeThis
         [Parameter(ParameterSetName="Last")]
         [switch]$Last
     )
-    #Add a timestamp to the Action in the requested format
-    switch ($format) {
-        'Milliseconds' { $Action += $spacer + '{0}' }
-        'Seconds' { $Action += $spacer + '{1}' }
-        'Minutes' { $Action += $spacer + '{2}' }                
-        'Full' { $Action += $spacer + '{3}' }
-    }
 
+    if ($Activity -notmatch '{.+?}') {
+        #Add a timestamp to the Action in the requested format
+        switch ($format) {
+            'Milliseconds' { $Activity += $spacer + '{0} ms' }
+            'Seconds' { $Activity += $spacer + '{1} s' }
+            'Minutes' { $Activity += $spacer + '{2} m' }                
+            default { $Activity += $spacer + '{3}' }
+        }
+    }
     if ( $First `
          -or $Script:_Timer -eq $null `
          -or $Script:_Timer.IsRunning -eq $false ) {
         #todo If script does not contain curly brackets 
         if ( -not $Last ) {
-            $Script:LastAction = $Action
+            $Script:LastActivity = $Activity
             #Start a new timer 
             $Script:_Timer = [System.Diagnostics.Stopwatch]::StartNew()
         }
     } else { 
+        #
         $Duration = $Script:_Timer.Elapsed
-        $message = $Script:LastAction -f $Duration.TotalMilliseconds, $Duration.TotalSeconds, $Duration.TotalMinutes, $Duration.ToString(), $Duration
+        
+        $message = $Script:LastActivity -f $Duration.TotalMilliseconds, $Duration.TotalSeconds, $Duration.TotalMinutes, $Duration.ToString(), $Duration
         Write-Host $message
+
         if ( $Last ) {
             $Script:_Timer.Stop()
             $Script:_Timer = $null
-            $Script:LastAction = $null
+            $Script:LastActivity = $null
         } else {
             $Script:_Timer.Restart()
-            $Script:LastAction = $Action
+            $Script:LastActivity = $Activity
         }
     }
 }
 
+cls
 
 
-
-TimeThis "Start Demo" 
+1..3| %{ TimeThis "Start Demo  {0,##.####}"  }
 Start-Sleep 1 
 TimeThis  "Next Step" -Format Seconds -First #Overrides the current running timner
 Start-Sleep 1
 TimeThis -Last
-
-
 
 TimeThis "Stap 1`t {3}" 
 Sleep -Seconds (Get-Random -Maximum 3)
