@@ -7,7 +7,7 @@
 @{
     # Script module associated with this manifest.
     RootModule = 'PSAppInsights'
-    ModuleVersion = '0.9.6'
+    ModuleVersion = '0.9.7'
 
     # ID used to uniquely identify this module
     GUID = '1706beeb-bb2f-4a51-b1fd-f972e62f4d2d'
@@ -28,15 +28,15 @@
     NestedModules = @(  
         #Application Insights Dlls that are needed for the exposed functionality 
         #base AI Service 
-        '.\Microsoft.ApplicationInsights.2.3.0\lib\net45\Microsoft.ApplicationInsights.dll',
+        '.\Microsoft.ApplicationInsights.2.8.1\lib\net45\Microsoft.ApplicationInsights.dll',
         #AI For fat clients 
-        '.\Microsoft.ApplicationInsights.WindowsServer.2.3.0\lib\net45\Microsoft.AI.WindowsServer.dll',
-        '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.3.0\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', 
+        '.\Microsoft.ApplicationInsights.WindowsServer.2.8.1\lib\net45\Microsoft.AI.WindowsServer.dll',
+        '.\Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel.2.8.1\lib\net45\Microsoft.AI.ServerTelemetryChannel.dll', 
         #AI based on perfcounters 
-        '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.3.0\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
+        '.\Microsoft.ApplicationInsights.PerfCounterCollector.2.8.1\lib\net45\Microsoft.AI.PerfCounterCollector.dll',
         # Tracking of dependencies 
-        '.\Microsoft.ApplicationInsights.DependencyCollector.2.3.0\lib\net45\Microsoft.AI.DependencyCollector.dll',
-        '.\Microsoft.ApplicationInsights.Agent.Intercept.2.0.7\lib\net45\Microsoft.AI.Agent.Intercept.dll',
+        '.\Microsoft.ApplicationInsights.DependencyCollector.2.8.1\lib\net45\Microsoft.AI.DependencyCollector.dll',
+        '.\Microsoft.ApplicationInsights.Agent.Intercept.2.4.0\lib\net45\Microsoft.AI.Agent.Intercept.dll',
 
         #And the additional powershell modules
         # Send Base event types 
