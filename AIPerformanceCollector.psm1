@@ -1,5 +1,4 @@
-﻿
-<#
+﻿<#
 .Synopsis
     Start collection perfromance counters and send them to App Insights
 .DESCRIPTION
@@ -15,7 +14,23 @@
     The perfmon collector is mantained per (powershell) process, and a reference to the collectore is stored in a global variable.
     $Global:AISingleton.PerformanceCollector
 
-    By default the counters are collected and sent every 30 seconds
+    By default the counters are collected and sent every 30 seconds.
+    The AI default set of perfcounters is : 
+
+    "\.NET CLR Exceptions(??APP_CLR_PROC??)\# of Exceps Thrown / sec"
+    "\Memory\Available Bytes"
+    "\Process(??APP_WIN32_PROC??)\% Processor Time Normalized"
+    "\Process(??APP_WIN32_PROC??)\% Processor Time"
+    "\Process(??APP_WIN32_PROC??)\IO Data Bytes/sec"
+    "\Process(??APP_WIN32_PROC??)\Private Bytes"
+    "\Processor(_Total)\% Processor Time"
+
+    "\ASP.NET Applications(??APP_W3SVC_PROC??)\Request Execution Time"
+    "\ASP.NET Applications(??APP_W3SVC_PROC??)\Requests In Application Queue"
+    "\ASP.NET Applications(??APP_W3SVC_PROC??)\Requests/Sec"
+
+    If you do not have IIS running, AI will report that it cannot collect the three W3SVC counters as part of the telemetry it sends.
+    after that is will stop trying to collect these counters, so you can safgly ignore that.
 .Component
     The implementation makes use of the Microsoft.ApplicationInsights.PerfCounterCollector package
 .LINK    
@@ -63,7 +78,7 @@ function Start-AIPerformanceCollector
     Write-Verbose "Create AI Performance Collector Instance"
     $Global:AISingleton.PerformanceCollector = New-Object  Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector.PerformanceCollectorModule
 
-    Write-Verbose "Add ??APP_WIN32_PROC?? performance counters"
+    Write-Verbose "Add Process(<CurrentProcess>)\<counter> performance counters"
     $ProcessName =  ([System.Diagnostics.Process]::GetCurrentProcess()).ProcessName 
     foreach ( $c in $ProcessCounters ) { 
         $Counter = "\Process($ProcessName)\$c"

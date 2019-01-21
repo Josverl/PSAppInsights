@@ -7,10 +7,22 @@
 .AUTHOR Jos Verlinde
 .GUID bcff6b0e-509e-4c9d-af31-dccc41e148d0
 #>
+#Suppress wanrings about variables not being used for this file 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 Param ( 
     #switch to test the installed module after initial test deployment  
     [switch]$TestInstalledModule
 )
+
+#Load Fiddler Module to see what is sent across the wire 
+Import-Module .\Tests\FiddlerTests.psm1 -Force -DisableNameChecking
+
+#Make sure A fresh fiddler is started 
+#Stop-Fiddler 
+Ensure-Fiddler
+Write-Verbose 'Wait for fiddler' -Verbose
+Start-Sleep 4 
+Stop-FiddlerCapture
 
 Get-Module -Name 'PSAppInsights' -All | Remove-Module -Force -ErrorAction SilentlyContinue
 if ($TestInstalledModule) { 
@@ -24,22 +36,121 @@ if ($TestInstalledModule) {
 
 }
 
-Describe "PSAppInsights Module" {
-    It "loads the AI Dll" {
-        New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue -Verbose| Should not be $null
+#Common test function 
+Function FilterCapture {
+Param (
+    $Capture,
+    [string]$Type = 'Event')
+    $Type = $Type.Trim()
+    $MyTelemetry = @( $Capture.AllTelemetry | Where-Object name -like "Microsoft.ApplicationInsights.*.$Type" ) 
+    if ($MyTelemetry.Count -lt $Capture.AllTelemetry.Count ) {
+        Write-warning ('{0} Additional telemetry records were captured' -f ($MyTelemetry.Count - $Capture.AllTelemetry.Count) )
     }
+    Write-Output $MyTelemetry
+}
+
+
+Describe 'should fail silently if no client is started' {
+    BeforeAll {
+        Stop-AIClient -WarningAction SilentlyContinue
+        
+        $ST = New-Stopwatch
+        $ST.Start
+        #For Exception and error handling
+        $ex = new-object System.Management.Automation.ApplicationFailedException
+        try  
+        {  
+            $fileContent = Get-Content -Path "C:\Does.not.exists.txt" -ErrorAction Stop  
+        }  
+        catch  
+        {  
+            $ex = $_.Exception
+            $er = $_ 
+        }
+    }
+    AfterAll {
+        $ST.Stop()
+        Stop-FiddlerCapture 
+    }
+    It 'Should not throw errors using the default client' { 
+       {Send-AIEvent -Event 'Test'  } | Should not throw 
+       {Send-AITrace -Message 'Test Trace'  } | Should not throw 
+       {Send-AIMetric -Metric 'Test' -Value 42 } | Should not throw 
+       {Send-AIDependency -StopWatch $ST -Name 'Test'  } | Should not throw 
+       {Send-AIException -Exception  $ex } | Should not throw 
+    }
+    It 'Should not throw errors flushing the default client'  { 
+        {Flush-AIClient } | Should not throw 
+        {Stop-AIClient } | Should not throw 
+    }
+
+    It 'Should not throw errors using a Specified client' { 
+       {Send-AIEvent -Client $null -Event 'Test'  } | Should not throw 
+       {Send-AITrace -Client $null  -Message 'Test Trace'  } | Should not throw 
+       {Send-AIMetric -Client $null  -Metric 'Test' -Value 42 } | Should not throw 
+       {Send-AIDependency -Client $null -StopWatch $ST -Name 'Test'  } | Should not throw 
+       {Send-AIException -Client $null -Exception  $ex } | Should not throw 
+    }
+    It 'Should not throw errors flushing  a Specified client' { 
+        {Flush-AIClient -Client $null } | Should not throw 
+        {Stop-AIClient -Client $null } | Should not throw 
+    }
+
+}
+
+Describe "PSAppInsights Module" {
+    It "loads the AI Dll"  -Pending {
+        New-Object Microsoft.ApplicationInsights.TelemetryClient  -ErrorAction SilentlyContinue -Verbose| Should not be $null
+        #Use Get-modules  to list all loaded DLLs and check for the expected ones 
+    }
+
+
+
+
     BeforeAll { 
-        #AI Powershell-test 
-        $key = "b437832d-a6b3-4bb4-b237-51308509747d"
+       
+        $key = "b437832d-a6b3-4bb4-b237-51308509747d" #AI Powershell-test 
 
         $PropHash = @{ "Pester" = "Great";"Testrun" = "True" ;"PowerShell" = $Host.Version.ToString() } 
         $MetricHash = @{ "Powershell" = 5;"year" = 2016 } 
+
+        #For Exception and error handling
+        $ex = new-object System.Management.Automation.ApplicationFailedException
+        try  
+        {  
+            $fileContent = Get-Content -Path "C:\Does.not.exists.txt" -ErrorAction Stop  
+        }  
+        catch  
+        {  
+            $ex = $_.Exception
+            $er = $_ 
+        }
+
     }
+    
     Context 'New Session' {
+        BeforeEach {
+            Start-FiddlerCapture 
+        }
+        AfterEach {
+            Stop-FiddlerCapture
+        }
+
+
+        it 'detects an invalid iKey' -Pending { 
+            # Start 
+            # send 
+            # Stop 
+
+            #Check using fiddler 
+            #{"itemsReceived":1,"itemsAccepted":0,"errors":[{"index":0,"statusCode":400,"message":"Invalid instrumentation key"}]}
+        }
+
+
 
         It 'can Init a new log AllowPII session' {
-
-            $client = New-AIClient -Key $key -AllowPII -Version "2.3.4"
+            $Version = "2.3.4"
+            $client = New-AIClient -Key $key -AllowPII -Version $Version
             
             $Global:AISingleton.Client | Should not be $null
 
@@ -53,18 +164,63 @@ Describe "PSAppInsights Module" {
             $client.Context.User.Id        | Should be $env:USERNAME
 
             #Check Version number detection
-            $Client.Context.Component.Version | should be "2.3.4"
+            $Client.Context.Component.Version | should be $Version
+            Send-AIEvent 'Ping'
+            Flush-AIClient
+            #Now check what has been transmitted 
+            $Capture = Get-FiddlerCapture  
+            $Capture.ErrorCount | Should be 0
+            #Filter
+            [array]$MyTelemetry = FilterCapture $Capture -Type 'Event'
+            $MyTelemetry.Count | Should be 1
+            if ($MyTelemetry.Count -eq 1) { 
+                $MyTelemetry[0].tags.'ai.application.ver' | Should be $Version
+                $MyTelemetry[0].tags.'ai.user.id' | Should be $env:USERNAME
+                $MyTelemetry[0].tags.'ai.device.id' | Should be $env:COMPUTERNAME 
 
+                $MyTelemetry[0].tags.'ai.user.userAgent' | Should be  $Host.Name
+
+                $MyTelemetry[0].tags.'ai.operation.id' -in '<No file>','PSAppInsights.Tests.ps1','Pester.psm1'  | Should be $true
+            }
         }
 
 
         It 'can Init Device properties' {
 
             { $TmtClient = New-AIClient -Key $key  -Init Device } | Should not Throw 
+            
+            Send-AIEvent 'Ping'
+            Flush-AIClient
+            #Now check what has been transmitted 
+            $Capture = Get-FiddlerCapture  
+            $Capture.ErrorCount | Should be 0
+            #Filter
+            [array]$MyTelemetry = FilterCapture $Capture -Type 'Event'
+            $MyTelemetry.Count | Should be 1
+            if ( $MyTelemetry.Count -eq 1) { 
+                $MyTelemetry[0].tags.'ai.device.osVersion'     | Should not be "" #  10.0.14393
+                $MyTelemetry[0].tags.'ai.device.oemName'       | Should not be "" #  LENOVO
+                $MyTelemetry[0].tags.'ai.device.model'         | Should not be "" #  20FRS02N12
+                $MyTelemetry[0].tags.'ai.device.type'          | Should not be "" #  PC
+            }            
         }
         it 'can Init  Domain properties' {    
 
             { $TmtClient = New-AIClient -Key $key -Init Domain } | Should not Throw 
+
+            Send-AIEvent 'Ping'
+            Flush-AIClient
+            #Now check what has been transmitted 
+            $Capture = Get-FiddlerCapture  
+            $Capture.ErrorCount | Should be 0
+            #Filter
+            [array]$MyTelemetry = FilterCapture $Capture -Type 'Event'            
+            $Mytelemetry.Count | Should be 1
+
+            if ($Mytelemetry.Count -eq 1) { 
+
+                #TODO Add tests
+            }                            
         }
         it 'can Init Operation Correlation' {    
 
@@ -78,10 +234,22 @@ Describe "PSAppInsights Module" {
 
         it 'can detect the calling script version' {
             $client = New-AIClient -Key $key -AllowPII -Init Device, Domain, Operation
-
+           
             #Check Version number  (match this script's version ) 
-            $Client.Context.Component.Version | should be "1.2.3"  
+            $ScriptVersion = "1.2.3" 
+            $Client.Context.Component.Version | should be  $ScriptVersion
 
+            Send-AIEvent 'Ping'
+            Flush-AIClient
+            #Now check what has been transmitted 
+            $Capture = Get-FiddlerCapture  
+            #Filter
+            [array]$MyTelemetry = FilterCapture $Capture -Type 'Event'
+
+            $MyTelemetry.Count | Should be 1
+            if ($MyTelemetry.Count -eq 1) { 
+                $MyTelemetry[0].tags.'ai.application.ver' | Should be $ScriptVersion               
+            }
         }
 
         it 'can log permon counters in developer mode' {
@@ -313,7 +481,13 @@ Describe "PSAppInsights Module" {
             {Send-AIException -Client $client -Severity 4 -Exception $ex -Metrics $MetricHash -Properties $PropHash  } | Should not throw 
       
         }
+        It 'can log a NULL Exception' -Pending {
 
+            {Send-AIException -Client $client -Exception  $NULL} | Should not throw 
+            #Using Global
+            {Send-AIException -Exception  $NULL } | Should not throw 
+
+        }
         #-----------------------------------------
 
         It 'can log a Page view ' -Skip {

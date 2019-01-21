@@ -40,14 +40,22 @@ function Send-AIDependency
 
         #Dependency Name
         [Parameter(Mandatory=$true)]
-        [string]$Name = "Update mailbox",
+        [string]$Name = "External Operation",
+
         [string]$CommandName = $name,
+
+        #Type of dependecy 
+        [ValidateSet("HTTP", "SQL", "Other")]
+        [string]$DependencyKind = "Other",
+
         [string]$DependencyTypeName = $name,
 
         #HTTP result code
         [bool]$Success = $true, 
-        #Hide this resultcode parameter as it appears to be defunt in 2.3.0
+
+        #Hide the resultcode parameter as it appears to be defunct in 2.3.0
         [Parameter(DontShow)]
+        #Resultcode alligs to HHTP result codes
         #[ValidateRange(0,999)]
         [int]$ResultCode = 200, 
 
@@ -55,10 +63,7 @@ function Send-AIDependency
         $Timestamp = (Get-Date), 
         #The AppInsights Client object to use.
         [Parameter(Mandatory=$false)]
-        [Microsoft.ApplicationInsights.TelemetryClient] $Client = $Global:AISingleton.Client,
-        #Type of dependecy 
-        [ValidateSet("HTTP", "SQL", "Other")]
-        [string]$DependencyKind = "Other",
+        [Microsoft.ApplicationInsights.TelemetryClient] $Client ,
 
 
         #Directly flush the AI events to the service
@@ -67,10 +72,19 @@ function Send-AIDependency
     Begin { 
         #Check for a specified AI client
         if ($Client -eq $null) {
-            throw [System.Management.Automation.PSArgumentNullException]::new($script:ErrNoClient)
+            If ( ($Global:AISingleton ) -AND ( $Global:AISingleton.Client ) ) {
+                #Use Current Client
+                $Client = $Global:AISingleton.Client
+            }
         }
     } 
+
     Process { 
+        #no need to do anything if there is no client
+        if ($Client -eq $null) { 
+            Write-Verbose 'No AI Client found'
+            return 
+        }  
 
         #check if a timespan has been provided 
         if ( $StopWatch -eq $null -and $TimeSpan -eq $null ) {
@@ -88,13 +102,17 @@ function Send-AIDependency
         $TelDependency.CommandName = $CommandName
         $TelDependency.DependencyTypeName = $DependencyTypeName
 
-        #Resultcode is apperantly removed from AI 2.3.0
-        If ($ResultCode -ne 200) {
-            Write-Warning "Resultcode cannot be reported in AI 2.3.0"
-        }
+        Try { 
+            $TelDependency.ResultCode = $ResultCode
+        } catch { 
+            #Resultcode is apperantly removed from AI 2.3.0
+            If ($ResultCode -ne 200) {
+                Write-Warning "Resultcode cannot be reported"
+            }
+        } 
         $TelDependency.Success = $Success
 
-        #$TelDependency.ResultCode = $ResultCode
+        
     
         if ($TimeSpan ) { 
             $TelDependency.Duration = $TimeSpan
