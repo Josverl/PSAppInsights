@@ -1,8 +1,8 @@
-import-module .\FiddlerTests.psm1 -DisableNameChecking -Force
+import-module .\Tests\FiddlerTests.psm1 -DisableNameChecking -Force
 
 #init a client and send basic PII information for correlation
 #this incudes the username and the machine name
-$fileName = 'C:\Users\josverl\OneDrive\PowerShell\PSAppInsights\Tests\LastSession.json'
+$fileName = '.\Tests\LastSession.json'
 
 #Stop-Fiddler -wait
 Start-FiddlerCapture 
@@ -11,7 +11,7 @@ $key = "b437832d-a6b3-4bb4-b237-51308509747d" #AI Powershell-test
 $Client = New-AIClient -Key $key -AllowPII 
 Send-AIEvent "Allow PII" -Flush
 Send-AIEvent "Allow PII" -Flush
-Save-FiddlerCapture -FileName  $fileName 
+Save-FiddlerCapture -FileName  $fileName -Show
 $Capture = Read-FiddlerAICapture -FileName  $fileName
 
 

@@ -1,7 +1,6 @@
 @{
     # If authoring a script module, the RootModule is the name of your .psm1 file
     #RootModule = 'MyModule.psm1'
-
     Author = 'Jos Verlinde <josverl@microsoft.com>'
 
     CompanyName = 'Microsoft'
@@ -64,13 +63,14 @@ Read-FiddlerAICapture   Read and process the Capture , and processess the JSON o
 Stop-Fiddler            Stops Fiddler 
 #>
 
+$FiddlerPath = 'C:\Users\josverl\AppData\Local\Programs\Fiddler'
 function Ensure-Fiddler {
 [CmdletBinding()]
 [OutputType([void])]    
 Param (
     [Switch]$Show
 )
-   
+
     if ($Show) { 
         $Action = " "
     } else {
@@ -78,7 +78,7 @@ Param (
     }
     #Make Sure fiddler is started 
     if (-not (Get-Process -Name 'Fiddler' -ErrorAction SilentlyContinue)) { 
-        Start-Process "C:\Program Files (x86)\Fiddler2\Fiddler.exe" -ArgumentList $Action 
+        Start-Process "$FiddlerPath\Fiddler.exe" -ArgumentList $Action 
 
         #Wait for Fiddler to start 
         while(-not (Get-Process -Name 'Fiddler' -ErrorAction SilentlyContinue)) {    
@@ -88,7 +88,7 @@ Param (
         Start-Job  -Name 'Start Fiddler, stop capture' -ScriptBlock { 
             #Try a few times until we can control it
             for ($i = 0; $i -lt 10; $i++) {
-                $R = &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" "Stop"
+                $R = &"$FiddlerPath\ExecAction.exe" "Stop"
                 "Wait $i"
                 Start-Sleep -Milliseconds 200
             } 
@@ -104,12 +104,12 @@ param (
 )   
     Ensure-Fiddler -Show:$Show
     if ($Show) { 
-        &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" Show
+        &"$FiddlerPath\ExecAction.exe" Show
     } else {
-        &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" hide
+        &"$FiddlerPath\ExecAction.exe" hide
     }
-    &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" clear
-    &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" start
+    &"$FiddlerPath\ExecAction.exe" clear
+    &"$FiddlerPath\ExecAction.exe" start
  
 }
 function Stop-FiddlerCapture  {
@@ -120,31 +120,31 @@ param (
 )   
     Ensure-Fiddler -Show:$Show
     if ($Show) { 
-        &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" Show
+        &"$FiddlerPath\ExecAction.exe" Show
     } else {
-        &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" hide
+        &"$FiddlerPath\ExecAction.exe" hide
     }
-    &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" stop
+    &"$FiddlerPath\ExecAction.exe" stop
 }
 
 function Save-FiddlerCapture  {
 [CmdletBinding()]
 [OutputType([bool])]    
 Param (
-    $fileName = 'C:\Users\josverl\OneDrive\PowerShell\PSAppInsights\Tests\LastSession.json',
+    $fileName = '.\Tests\LastSession.json',
     $ProcessID = $PID,
     [Switch]$Show
 )
     Ensure-Fiddler -Show:$Show
     if ($Show) { 
-        &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" Show
+        &"$FiddlerPath\ExecAction.exe" Show
     } else {
-        &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" hide
+        &"$FiddlerPath\ExecAction.exe" hide
     }
-    &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" stop
+    &"$FiddlerPath\ExecAction.exe" stop
     #Select Only the sessions sent by this PowerShell process 
-    &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" "select @col.Process :$ProcessID"
-    &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" "DumpJson $FileName"
+    &"$FiddlerPath\ExecAction.exe" "select @col.Process :$ProcessID"
+    &"$FiddlerPath\ExecAction.exe" "DumpJson $FileName"
 
     #Wait for File  For up to 10 secs 
     $timeout = new-timespan -Seconds 10
@@ -154,7 +154,7 @@ Param (
     {
         Start-Sleep -Milliseconds 200   
     }
-    #And a little more to avoid problems while loading later
+    #And wait a little more to avoid problems while loading later
     Start-Sleep -Milliseconds 100 
     Return (Test-Path $FileName)
  }
@@ -163,7 +163,7 @@ function Read-FiddlerAICapture {
 [CmdletBinding()]
 [OutputType([PSObject[]])]
 Param (
-    $fileName = 'C:\Users\josverl\OneDrive\PowerShell\PSAppInsights\Tests\LastSession.json',
+    $fileName = '.\Tests\LastSession.json',
     [Switch]$QuickPulse
 )
     if (!(Test-Path -LiteralPath $FileName)) {
@@ -247,7 +247,7 @@ function Stop-Fiddler {
 param ( [Switch]$wait)    
     #Make Sure fiddler is started 
     if ((Get-Process -Name 'Fiddler' -ErrorAction SilentlyContinue)) { 
-        $R = &"C:\Program Files (x86)\Fiddler2\ExecAction.exe" "quit"
+        $R = &"$FiddlerPath\ExecAction.exe" "quit"
     }
     #Clean up any remaining jobs 
     Get-Job  -Name 'Start Fiddler, stop capture' -ErrorAction SilentlyContinue | 

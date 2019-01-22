@@ -5,7 +5,7 @@
           - add 2nd test run after intial test install 
        
 
-    #v0.8 - correceld path bug that caused issues with publishing a module
+    #v0.8 - corrected path bug that caused issues with publishing a module
  - Script
  #  v0.7 Test script Install -Scope CurrentUser
             + Change taskname to Publish ( dit moet toch al gedaan zijn??) 

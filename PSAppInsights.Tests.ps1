@@ -2,7 +2,7 @@
 .DESCRIPTION 
     Pester tests for PowerShell App Insights Module
     The script .Version 1.2.3 is used in test, 
-    do not modify withouth changing the test can detect the calling script version' 
+    do not modify withouth changing the test 'can detect the calling script version' 
 .VERSION 1.2.3
 .AUTHOR Jos Verlinde
 .GUID bcff6b0e-509e-4c9d-af31-dccc41e148d0
@@ -34,7 +34,8 @@ if ($TestInstalledModule) {
 } else { 
     Write-Verbose '--------- Load Module under development ------------' -Verbose 
     Import-Module ".\PSAppInsights.psd1" -Force 
-
+    $M = Get-Module PSAppInsights
+    Write-Verbose "$($M.Name) $($M.Version)"
 }
 
 #Common test function 
@@ -178,10 +179,36 @@ Describe "PSAppInsights Module" {
                 $MyTelemetry[0].tags.'ai.application.ver' | Should be $Version
                 $MyTelemetry[0].tags.'ai.user.id' | Should be $env:USERNAME
                 $MyTelemetry[0].tags.'ai.device.id' | Should be $env:COMPUTERNAME 
-
-                $MyTelemetry[0].tags.'ai.user.userAgent' | Should be  $Host.Name
+                
+                # Moved to seperate test 
+                #$MyTelemetry[0].tags.'ai.user.userAgent' | Should be  $Host.Name
 
                 $MyTelemetry[0].tags.'ai.operation.id' -in '<No file>','PSAppInsights.Tests.ps1','Pester.psm1'  | Should be $true
+            }
+        }
+
+        It 'can report the powershell host' -Pending {
+            $Version = "2.3.4"
+            $client = New-AIClient -Key $key -AllowPII -Version $Version
+
+            $Global:AISingleton.Client | Should not be $null
+            $client | Should not be $null
+            $client.InstrumentationKey -ieq $key | Should be $true
+        
+            $client.Context.User.UserAgent | Should be $Host.Name
+
+            #Generate traffic 
+            Send-AIEvent 'Ping'
+            Flush-AIClient
+
+            #Now check what has been transmitted 
+            $Capture = Get-FiddlerCapture  
+            $Capture.ErrorCount | Should be 0
+            #Filter
+            [array]$MyTelemetry = FilterCapture $Capture -Type 'Event'
+            $MyTelemetry.Count | Should be 1
+            if ($MyTelemetry.Count -eq 1) { 
+                $MyTelemetry[0].tags.'ai.user.userAgent' | Should be  $Host.Name
             }
         }
 
@@ -540,7 +567,7 @@ Describe "PSAppInsights Module" {
 }
 
 
-Describe 'AI Dependency Nested Module' {
+Describe 'AI Dependency Nested Module'  {
 
     BeforeAll {
 
